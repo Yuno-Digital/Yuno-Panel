@@ -24,13 +24,13 @@
     <label class="inline-flex items-center">
         <input type="hidden" name="is_admin" value="0">
         <input type="checkbox" name="is_admin" value="1"
-               class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500"
+               class="rounded border-gray-300 dark:border-gray-600 text-indigo-600 shadow-sm focus:ring-indigo-500"
                @checked(old('is_admin', $user->is_admin))>
-        <span class="ms-2 text-sm text-gray-600">{{ __('Administrator') }}</span>
+        <span class="ms-2 text-sm text-gray-600 dark:text-gray-400">{{ __('Administrator') }}</span>
     </label>
 
     <div class="flex items-center gap-4">
         <x-primary-button>{{ __('Save') }}</x-primary-button>
-        <a href="{{ route('admin.users.index') }}" class="text-sm text-gray-600 hover:underline">{{ __('Cancel') }}</a>
+        <a href="{{ route('admin.users.index') }}" class="text-sm text-gray-600 dark:text-gray-400 hover:underline">{{ __('Cancel') }}</a>
     </div>
 </div>

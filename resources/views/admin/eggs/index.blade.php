@@ -1,28 +1,28 @@
 <x-admin title="Eggs">
     <div class="mb-4 flex justify-between items-center">
-        <h3 class="text-lg font-medium text-gray-900">{{ __('Eggs') }}</h3>
+        <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100">{{ __('Eggs') }}</h3>
         <a href="{{ route('admin.eggs.create') }}">
             <x-primary-button>{{ __('New egg') }}</x-primary-button>
         </a>
     </div>
 
-    <div class="bg-white shadow-sm sm:rounded-lg overflow-hidden">
+    <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg overflow-hidden">
         @if ($eggs->isEmpty())
-            <div class="p-6 text-gray-500">{{ __('No eggs yet. Eggs are reusable server templates (image + startup command).') }}</div>
+            <div class="p-6 text-gray-500 dark:text-gray-400">{{ __('No eggs yet. Eggs are reusable server templates (image + startup command).') }}</div>
         @else
-            <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
-                    <tr class="text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead class="bg-gray-50 dark:bg-gray-700/40">
+                    <tr class="text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                         <th class="px-6 py-3">{{ __('Name') }}</th>
                         <th class="px-6 py-3">{{ __('Author') }}</th>
                         <th class="px-6 py-3">{{ __('Docker image') }}</th>
                         <th class="px-6 py-3 text-right">{{ __('Actions') }}</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-gray-200 text-sm text-gray-700">
+                <tbody class="divide-y divide-gray-200 dark:divide-gray-700 text-sm text-gray-700 dark:text-gray-300">
                     @foreach ($eggs as $egg)
                         <tr>
-                            <td class="px-6 py-4 font-medium text-gray-900">{{ $egg->name }}</td>
+                            <td class="px-6 py-4 font-medium text-gray-900 dark:text-gray-100">{{ $egg->name }}</td>
                             <td class="px-6 py-4">{{ $egg->author ?? '—' }}</td>
                             <td class="px-6 py-4 font-mono text-xs">{{ $egg->docker_image }}</td>
                             <td class="px-6 py-4">

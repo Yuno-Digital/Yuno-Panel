@@ -7,9 +7,12 @@ use App\Http\Controllers\Admin\NodeController as AdminNodeController;
 use App\Http\Controllers\Admin\ServerController as AdminServerController;
 use App\Http\Controllers\Admin\SettingController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
+use App\Http\Controllers\ClientApiKeyController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ServerController;
+use App\Http\Controllers\TwoFactorChallengeController;
+use App\Http\Controllers\TwoFactorController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -26,6 +29,18 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
+    // Theme preference (light / dark / system).
+    Route::patch('/profile/theme', [ProfileController::class, 'updateTheme'])->name('profile.theme');
+
+    // Client API keys are managed by each user from their profile.
+    Route::post('/profile/api-keys', [ClientApiKeyController::class, 'store'])->name('profile.api-keys.store');
+    Route::delete('/profile/api-keys/{apiKey}', [ClientApiKeyController::class, 'destroy'])->name('profile.api-keys.destroy');
+
+    // Two-factor authentication setup.
+    Route::post('/profile/two-factor', [TwoFactorController::class, 'store'])->name('profile.2fa.store');
+    Route::post('/profile/two-factor/confirm', [TwoFactorController::class, 'confirm'])->name('profile.2fa.confirm');
+    Route::delete('/profile/two-factor', [TwoFactorController::class, 'destroy'])->name('profile.2fa.destroy');
 });
 
 Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
@@ -41,9 +56,13 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
 
     Route::get('api/application', [ApiKeyController::class, 'application'])->name('api.application.index');
     Route::post('api/application', [ApiKeyController::class, 'storeApplication'])->name('api.application.store');
-    Route::get('api/client', [ApiKeyController::class, 'client'])->name('api.client.index');
-    Route::post('api/client', [ApiKeyController::class, 'storeClient'])->name('api.client.store');
     Route::delete('api/keys/{apiKey}', [ApiKeyController::class, 'destroy'])->name('api.keys.destroy');
 });
+
+// Two-factor login challenge (after password, before the session is authenticated).
+Route::get('/two-factor-challenge', [TwoFactorChallengeController::class, 'create'])
+    ->middleware('guest')->name('two-factor.challenge');
+Route::post('/two-factor-challenge', [TwoFactorChallengeController::class, 'store'])
+    ->middleware('guest')->name('two-factor.challenge.store');
 
 require __DIR__.'/auth.php';

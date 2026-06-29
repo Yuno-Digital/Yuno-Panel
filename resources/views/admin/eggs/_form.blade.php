@@ -25,7 +25,7 @@
     <div>
         <x-input-label for="startup" :value="__('Startup command')" />
         <textarea id="startup" name="startup" rows="3"
-                  class="mt-1 block w-full font-mono text-sm border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm"
+                  class="mt-1 block w-full font-mono text-sm border-gray-300 dark:border-gray-600 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm"
                   placeholder="java -Xms128M -Xmx@{{SERVER_MEMORY}}M -jar server.jar" required>{{ old('startup', $egg->startup) }}</textarea>
         <x-input-error :messages="$errors->get('startup')" class="mt-2" />
     </div>
@@ -33,12 +33,12 @@
     <div>
         <x-input-label for="description" :value="__('Description')" />
         <textarea id="description" name="description" rows="3"
-                  class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">{{ old('description', $egg->description) }}</textarea>
+                  class="mt-1 block w-full border-gray-300 dark:border-gray-600 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">{{ old('description', $egg->description) }}</textarea>
         <x-input-error :messages="$errors->get('description')" class="mt-2" />
     </div>
 
     <div class="flex items-center gap-4">
         <x-primary-button>{{ __('Save') }}</x-primary-button>
-        <a href="{{ route('admin.eggs.index') }}" class="text-sm text-gray-600 hover:underline">{{ __('Cancel') }}</a>
+        <a href="{{ route('admin.eggs.index') }}" class="text-sm text-gray-600 dark:text-gray-400 hover:underline">{{ __('Cancel') }}</a>
     </div>
 </div>

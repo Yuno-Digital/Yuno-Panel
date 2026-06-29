@@ -1,7 +1,7 @@
 <x-admin title="Settings">
-    <h3 class="mb-4 text-lg font-medium text-gray-900">{{ __('Settings') }}</h3>
+    <h3 class="mb-4 text-lg font-medium text-gray-900 dark:text-gray-100">{{ __('Settings') }}</h3>
 
-    <div class="bg-white shadow-sm sm:rounded-lg p-6 max-w-3xl">
+    <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6 max-w-3xl">
         <form method="POST" action="{{ route('admin.settings.update') }}">
             @csrf
             @method('PUT')
@@ -23,9 +23,9 @@
                 <label class="inline-flex items-center">
                     <input type="hidden" name="allow_registration" value="0">
                     <input type="checkbox" name="allow_registration" value="1"
-                           class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500"
+                           class="rounded border-gray-300 dark:border-gray-600 text-indigo-600 shadow-sm focus:ring-indigo-500"
                            @checked(old('allow_registration', $settings['allow_registration']) === '1')>
-                    <span class="ms-2 text-sm text-gray-600">{{ __('Allow public registration') }}</span>
+                    <span class="ms-2 text-sm text-gray-600 dark:text-gray-400">{{ __('Allow public registration') }}</span>
                 </label>
 
                 <div>

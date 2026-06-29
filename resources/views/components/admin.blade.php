@@ -16,7 +16,6 @@
         ],
         'API' => [
             ['route' => 'admin.api.application.index', 'pattern' => 'admin.api.application.*', 'label' => 'Application Keys'],
-            ['route' => 'admin.api.client.index', 'pattern' => 'admin.api.client.*', 'label' => 'Client Keys'],
         ],
     ];
 @endphp
@@ -29,7 +28,7 @@
     <div class="py-8">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 flex flex-col md:flex-row gap-6">
             <aside class="md:w-56 shrink-0">
-                <nav class="bg-white shadow-sm sm:rounded-lg p-3 space-y-4">
+                <nav class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-3 space-y-4">
                     @foreach ($groups as $group => $items)
                         <div>
                             <p class="px-3 mb-1 text-xs font-semibold uppercase tracking-wider text-gray-400">{{ $group }}</p>
@@ -37,7 +36,7 @@
                                 @foreach ($items as $item)
                                     <li>
                                         <a href="{{ route($item['route']) }}"
-                                           class="block px-3 py-2 rounded-md text-sm font-medium {{ request()->routeIs($item['pattern']) ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-gray-100' }}">
+                                           class="block px-3 py-2 rounded-md text-sm font-medium {{ request()->routeIs($item['pattern']) ? 'bg-indigo-600 text-white' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700' }}">
                                             {{ __($item['label']) }}
                                         </a>
                                     </li>

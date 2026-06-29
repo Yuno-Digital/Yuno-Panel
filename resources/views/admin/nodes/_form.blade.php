@@ -26,7 +26,7 @@
         <x-input-label for="daemon_token" :value="__('Daemon token')" />
         <x-text-input id="daemon_token" name="daemon_token" type="text" class="mt-1 block w-full font-mono text-sm"
                       :value="old('daemon_token', $node->daemon_token)" required />
-        <p class="mt-1 text-xs text-gray-500">
+        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
             {{ __('The token from the Wings config.json on this node.') }}
         </p>
         <x-input-error :messages="$errors->get('daemon_token')" class="mt-2" />
@@ -35,14 +35,14 @@
     <div>
         <x-input-label for="description" :value="__('Description')" />
         <textarea id="description" name="description" rows="3"
-                  class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">{{ old('description', $node->description) }}</textarea>
+                  class="mt-1 block w-full border-gray-300 dark:border-gray-600 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">{{ old('description', $node->description) }}</textarea>
         <x-input-error :messages="$errors->get('description')" class="mt-2" />
     </div>
 
-    <div class="rounded-md bg-gray-50 border border-gray-200 px-4 py-3 text-sm text-gray-600">
+    <div class="rounded-md bg-gray-50 dark:bg-gray-700/40 border border-gray-200 dark:border-gray-700 px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
         {{ __('Memory and disk are detected automatically from the node when you save.') }}
         @if ($node->exists && $node->memory_mb)
-            <span class="block mt-1 text-gray-800">
+            <span class="block mt-1 text-gray-800 dark:text-gray-100">
                 {{ __('Currently detected:') }}
                 <strong>{{ \App\Support\Format::size($node->memory_mb) }}</strong> {{ __('RAM') }},
                 <strong>{{ \App\Support\Format::size($node->disk_mb) }}</strong> {{ __('disk') }}.
@@ -52,6 +52,6 @@
 
     <div class="flex items-center gap-4">
         <x-primary-button>{{ __('Save & detect') }}</x-primary-button>
-        <a href="{{ route('admin.nodes.index') }}" class="text-sm text-gray-600 hover:underline">{{ __('Cancel') }}</a>
+        <a href="{{ route('admin.nodes.index') }}" class="text-sm text-gray-600 dark:text-gray-400 hover:underline">{{ __('Cancel') }}</a>
     </div>
 </div>

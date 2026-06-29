@@ -1,6 +1,6 @@
 @csrf
 @php
-    $selectClass = 'mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm';
+    $selectClass = 'mt-1 block w-full border-gray-300 dark:border-gray-600 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm';
 @endphp
 <div class="space-y-6">
     <div>
@@ -68,6 +68,6 @@
 
     <div class="flex items-center gap-4">
         <x-primary-button>{{ __('Save') }}</x-primary-button>
-        <a href="{{ route('admin.servers.index') }}" class="text-sm text-gray-600 hover:underline">{{ __('Cancel') }}</a>
+        <a href="{{ route('admin.servers.index') }}" class="text-sm text-gray-600 dark:text-gray-400 hover:underline">{{ __('Cancel') }}</a>
     </div>
 </div>
