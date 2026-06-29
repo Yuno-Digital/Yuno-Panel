@@ -10,19 +10,48 @@
                     </a>
                 </div>
 
-                <!-- Navigation Links -->
-                <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
-                    <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
-                        {{ __('Dashboard') }}
-                    </x-nav-link>
-                    <x-nav-link :href="route('servers.index')" :active="request()->routeIs('servers.*')">
-                        {{ __('Servers') }}
-                    </x-nav-link>
-                    @if (Auth::user()->is_admin)
-                        <x-nav-link :href="route('admin.dashboard')" :active="request()->routeIs('admin.*')">
-                            {{ __('Admin') }}
-                        </x-nav-link>
-                    @endif
+                <!-- Navigation Links: modern segmented pills -->
+                @php
+                    $navLinks = [
+                        [
+                            'route' => 'dashboard',
+                            'pattern' => 'dashboard',
+                            'label' => __('Dashboard'),
+                            'icon' => 'M3 12l9-7 9 7M5 10v9a1 1 0 001 1h4v-6h4v6h4a1 1 0 001-1v-9',
+                        ],
+                        [
+                            'route' => 'servers.index',
+                            'pattern' => 'servers.*',
+                            'label' => __('Servers'),
+                            'icon' => 'M5 5h14a1 1 0 011 1v3a1 1 0 01-1 1H5a1 1 0 01-1-1V6a1 1 0 011-1zM5 14h14a1 1 0 011 1v3a1 1 0 01-1 1H5a1 1 0 01-1-1v-3a1 1 0 011-1zM8 7.5h.01M8 16.5h.01',
+                        ],
+                    ];
+                    if (Auth::user()->is_admin) {
+                        $navLinks[] = [
+                            'route' => 'admin.dashboard',
+                            'pattern' => 'admin.*',
+                            'label' => __('Admin'),
+                            'icon' => 'M9 12l2 2 4-4M12 3l7 4v5c0 4.418-3.134 7.582-7 9-3.866-1.418-7-4.582-7-9V7l7-4z',
+                        ];
+                    }
+                @endphp
+                <div class="hidden sm:flex sm:items-center sm:ms-8">
+                    <div class="inline-flex items-center gap-1 rounded-xl bg-gray-100 dark:bg-gray-900/60 p-1.5 ring-1 ring-gray-200 dark:ring-gray-700">
+                        @foreach ($navLinks as $link)
+                            @php $isActive = request()->routeIs($link['pattern']); @endphp
+                            <a href="{{ route($link['route']) }}"
+                               @class([
+                                   'group inline-flex items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-semibold tracking-tight transition-all duration-150',
+                                   'bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-300 shadow-sm ring-1 ring-black/5' => $isActive,
+                                   'text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200' => ! $isActive,
+                               ])>
+                                <svg class="w-[18px] h-[18px]" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="{{ $link['icon'] }}" />
+                                </svg>
+                                <span>{{ $link['label'] }}</span>
+                            </a>
+                        @endforeach
+                    </div>
                 </div>
             </div>
 
