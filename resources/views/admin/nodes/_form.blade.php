@@ -11,7 +11,7 @@
         <div class="sm:col-span-2">
             <x-input-label for="fqdn" :value="__('FQDN / IP')" />
             <x-text-input id="fqdn" name="fqdn" type="text" class="mt-1 block w-full"
-                          :value="old('fqdn', $node->fqdn)" required />
+                          :value="old('fqdn', $node->fqdn)" placeholder="node01.example.com" required />
             <x-input-error :messages="$errors->get('fqdn')" class="mt-2" />
         </div>
         <div>
@@ -22,19 +22,14 @@
         </div>
     </div>
 
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-        <div>
-            <x-input-label for="memory_mb" :value="__('Memory (MB)')" />
-            <x-text-input id="memory_mb" name="memory_mb" type="number" class="mt-1 block w-full"
-                          :value="old('memory_mb', $node->memory_mb ?? 0)" required />
-            <x-input-error :messages="$errors->get('memory_mb')" class="mt-2" />
-        </div>
-        <div>
-            <x-input-label for="disk_mb" :value="__('Disk (MB)')" />
-            <x-text-input id="disk_mb" name="disk_mb" type="number" class="mt-1 block w-full"
-                          :value="old('disk_mb', $node->disk_mb ?? 0)" required />
-            <x-input-error :messages="$errors->get('disk_mb')" class="mt-2" />
-        </div>
+    <div>
+        <x-input-label for="daemon_token" :value="__('Daemon token')" />
+        <x-text-input id="daemon_token" name="daemon_token" type="text" class="mt-1 block w-full font-mono text-sm"
+                      :value="old('daemon_token', $node->daemon_token)" required />
+        <p class="mt-1 text-xs text-gray-500">
+            {{ __('The token from the Wings config.json on this node.') }}
+        </p>
+        <x-input-error :messages="$errors->get('daemon_token')" class="mt-2" />
     </div>
 
     <div>
@@ -44,16 +39,19 @@
         <x-input-error :messages="$errors->get('description')" class="mt-2" />
     </div>
 
-    <label class="inline-flex items-center">
-        <input type="hidden" name="is_online" value="0">
-        <input type="checkbox" name="is_online" value="1"
-               class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500"
-               @checked(old('is_online', $node->is_online))>
-        <span class="ms-2 text-sm text-gray-600">{{ __('Mark as online') }}</span>
-    </label>
+    <div class="rounded-md bg-gray-50 border border-gray-200 px-4 py-3 text-sm text-gray-600">
+        {{ __('Memory and disk are detected automatically from the node when you save.') }}
+        @if ($node->exists && $node->memory_mb)
+            <span class="block mt-1 text-gray-800">
+                {{ __('Currently detected:') }}
+                <strong>{{ number_format($node->memory_mb) }} MB</strong> {{ __('RAM') }},
+                <strong>{{ number_format($node->disk_mb) }} MB</strong> {{ __('disk') }}.
+            </span>
+        @endif
+    </div>
 
     <div class="flex items-center gap-4">
-        <x-primary-button>{{ __('Save') }}</x-primary-button>
+        <x-primary-button>{{ __('Save & detect') }}</x-primary-button>
         <a href="{{ route('admin.nodes.index') }}" class="text-sm text-gray-600 hover:underline">{{ __('Cancel') }}</a>
     </div>
 </div>

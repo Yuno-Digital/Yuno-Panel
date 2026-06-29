@@ -47,6 +47,8 @@ Unter `/admin` (nur für User mit `is_admin`, abgesichert per `admin`-Middleware
 
 - **Overview** – systemweite Kennzahlen (User, Nodes, Server)
 - **Nodes / Servers / Users** – vollständiges CRUD (anlegen, bearbeiten, löschen)
+- Beim Speichern eines **Nodes** kontaktiert das Panel den Wings-Daemon (FQDN +
+  Port + Token) und erkennt **RAM/Disk sowie den Online-Status automatisch**
 
 ## Nächste Schritte (Roadmap)
 
