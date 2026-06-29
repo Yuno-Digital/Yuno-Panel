@@ -75,8 +75,10 @@ class EggController extends Controller
             'docker_image_values.*' => ['nullable', 'string', 'max:255'],
             'file_denylist' => ['nullable', 'string'],
             'update_url' => ['nullable', 'url', 'max:255'],
-            'startup_commands' => ['required', 'array', 'min:1'],
-            'startup_commands.*' => ['nullable', 'string'],
+            'startup_command_names' => ['nullable', 'array'],
+            'startup_command_names.*' => ['nullable', 'string', 'max:255'],
+            'startup_command_values' => ['required', 'array', 'min:1'],
+            'startup_command_values.*' => ['nullable', 'string'],
             'config_from' => ['nullable', Rule::exists('eggs', 'id')],
             'config_startup' => ['nullable', 'string', 'json'],
             'config_stop' => ['nullable', 'string', 'max:255'],
@@ -93,9 +95,9 @@ class EggController extends Controller
             throw ValidationException::withMessages(['docker_image_values' => __('Add at least one Docker image.')]);
         }
 
-        $startups = $this->cleanList($data['startup_commands']);
+        $startups = $this->zipStartupCommands($data['startup_command_names'] ?? [], $data['startup_command_values']);
         if ($startups === []) {
-            throw ValidationException::withMessages(['startup_commands' => __('Add at least one startup command.')]);
+            throw ValidationException::withMessages(['startup_command_values' => __('Add at least one startup command.')]);
         }
 
         return [
@@ -108,7 +110,7 @@ class EggController extends Controller
             'docker_image' => array_values($images)[0] ?? '',
             'file_denylist' => $this->parseList($data['file_denylist'] ?? ''),
             'update_url' => $data['update_url'] ?? null,
-            'startup' => $startups[0],
+            'startup' => $startups[0]['command'],
             'startup_commands' => $startups,
             'config_from' => $data['config_from'] ?? null,
             'config_startup' => $data['config_startup'] ?? null,
@@ -161,17 +163,27 @@ class EggController extends Controller
     }
 
     /**
-     * Trim and drop empty entries from a list of strings.
+     * Combine parallel name/value input arrays into a list of startup commands,
+     * preserving an optional label and skipping rows with an empty command.
      *
+     * @param  array<int, string|null>  $names
      * @param  array<int, string|null>  $values
-     * @return array<int, string>
+     * @return array<int, array{name: string, command: string}>
      */
-    private function cleanList(array $values): array
+    private function zipStartupCommands(array $names, array $values): array
     {
-        return collect($values)
-            ->map(fn ($v) => trim((string) $v))
-            ->filter()
-            ->values()
-            ->all();
+        $commands = [];
+        foreach ($values as $i => $command) {
+            $command = trim((string) $command);
+            if ($command === '') {
+                continue;
+            }
+            $commands[] = [
+                'name' => trim((string) ($names[$i] ?? '')),
+                'command' => $command,
+            ];
+        }
+
+        return $commands;
     }
 }

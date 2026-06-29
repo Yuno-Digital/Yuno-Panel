@@ -9,10 +9,16 @@
         $initialImages = [['name' => '', 'image' => '']];
     }
 
-    $initialStartups = collect($egg->startup_commands ?? array_filter([$egg->startup]))
-        ->map(fn ($c) => ['v' => (string) $c])->values()->all();
+    $initialStartups = collect($egg->startup_commands ?? [])
+        ->map(fn ($c) => is_array($c)
+            ? ['name' => (string) ($c['name'] ?? ''), 'command' => (string) ($c['command'] ?? '')]
+            : ['name' => '', 'command' => (string) $c])
+        ->values()->all();
+    if ($initialStartups === [] && $egg->startup) {
+        $initialStartups = [['name' => '', 'command' => (string) $egg->startup]];
+    }
     if ($initialStartups === []) {
-        $initialStartups = [['v' => '']];
+        $initialStartups = [['name' => '', 'command' => '']];
     }
 @endphp
 <div class="space-y-6">
@@ -69,21 +75,25 @@
     <div x-data="{ cmds: {{ Illuminate\Support\Js::from($initialStartups) }} }">
         <x-input-label :value="__('Startup commands')" />
         <p class="mt-1 mb-2 text-xs text-gray-500 dark:text-gray-400">{{ __('Add one or more start commands. The first is the default.') }}</p>
-        <div class="space-y-2">
+        <div class="space-y-3">
             <template x-for="(cmd, i) in cmds" :key="i">
-                <div class="flex items-center gap-2">
-                    <span class="shrink-0 text-xs text-gray-400 w-4 text-right" x-text="i + 1"></span>
-                    <input type="text" name="startup_commands[]" x-model="cmds[i].v" placeholder="java -Xmx@{{SERVER_MEMORY}}M -jar server.jar" class="{{ $row }} flex-1 min-w-0 font-mono">
-                    <button type="button" @click="cmds.splice(i, 1)" x-show="cmds.length > 1"
-                            class="shrink-0 w-9 h-9 rounded-md text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30" title="{{ __('Remove') }}">&times;</button>
+                <div class="rounded-md border border-gray-200 dark:border-gray-700 p-3">
+                    <div class="flex items-center gap-2">
+                        <span class="shrink-0 text-xs font-medium text-gray-400 w-6" x-text="'#' + (i + 1)"></span>
+                        <input type="text" name="startup_command_names[]" x-model="cmds[i].name" placeholder="{{ __('Label (optional)') }}" class="{{ $row }} flex-1 min-w-0">
+                        <button type="button" @click="cmds.splice(i, 1)" x-show="cmds.length > 1"
+                                class="shrink-0 w-8 h-8 rounded-md text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30" title="{{ __('Remove') }}">&times;</button>
+                    </div>
+                    <textarea name="startup_command_values[]" x-model="cmds[i].command" rows="2" spellcheck="false"
+                              placeholder="java -Xmx@{{SERVER_MEMORY}}M -jar server.jar" class="{{ $row }} mt-2 block w-full font-mono"></textarea>
                 </div>
             </template>
         </div>
-        <button type="button" @click="cmds.push({ v: '' })"
+        <button type="button" @click="cmds.push({ name: '', command: '' })"
                 class="mt-2 inline-flex items-center gap-1 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:underline">
             + {{ __('Add command') }}
         </button>
-        <x-input-error :messages="$errors->get('startup_commands')" class="mt-2" />
+        <x-input-error :messages="$errors->get('startup_command_values')" class="mt-2" />
     </div>
 
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">

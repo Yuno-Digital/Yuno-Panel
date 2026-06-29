@@ -47,7 +47,29 @@ class EggImportController extends Controller
             $images = [$json['image'] => $json['image']];
         }
 
-        $startup = (string) ($json['startup'] ?? '');
+        // Startup commands: Pterodactyl uses a single `startup` string; Pelican
+        // exports a `startup_commands` map of label => command. Keep the labels.
+        $startupCommands = [];
+        if (! empty($json['startup_commands']) && is_array($json['startup_commands'])) {
+            foreach ($json['startup_commands'] as $label => $command) {
+                $command = trim((string) $command);
+                if ($command === '') {
+                    continue;
+                }
+                $startupCommands[] = [
+                    'name' => is_string($label) ? $label : '',
+                    'command' => $command,
+                ];
+            }
+        }
+
+        $startup = trim((string) ($json['startup'] ?? ''));
+        if ($startup === '' && $startupCommands !== []) {
+            $startup = $startupCommands[0]['command'];
+        }
+        if ($startupCommands === [] && $startup !== '') {
+            $startupCommands = [['name' => '', 'command' => $startup]];
+        }
 
         $egg = Egg::create([
             'name' => $json['name'],
@@ -60,7 +82,7 @@ class EggImportController extends Controller
             'file_denylist' => $json['file_denylist'] ?? null,
             'update_url' => Arr::get($json, 'meta.update_url'),
             'startup' => $startup,
-            'startup_commands' => $startup !== '' ? [$startup] : null,
+            'startup_commands' => $startupCommands ?: null,
             'config_files' => $this->asJsonText($config['files'] ?? null),
             'config_startup' => $this->asJsonText($config['startup'] ?? null),
             'config_logs' => $this->asJsonText($config['logs'] ?? null),
