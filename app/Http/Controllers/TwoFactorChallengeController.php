@@ -11,9 +11,7 @@ use PragmaRX\Google2FAQRCode\Google2FA;
 
 class TwoFactorChallengeController extends Controller
 {
-    public function __construct(private readonly Google2FA $google2fa)
-    {
-    }
+    public function __construct(private readonly Google2FA $google2fa) {}
 
     /**
      * Show the two-factor challenge after a successful password login.

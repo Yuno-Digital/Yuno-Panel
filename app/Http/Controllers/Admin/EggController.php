@@ -19,7 +19,7 @@ class EggController extends Controller
 
     public function create(): View
     {
-        return view('admin.eggs.create', ['egg' => new Egg()]);
+        return view('admin.eggs.create', ['egg' => new Egg]);
     }
 
     public function store(Request $request): RedirectResponse

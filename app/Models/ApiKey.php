@@ -13,6 +13,7 @@ use Illuminate\Support\Str;
 class ApiKey extends Model
 {
     public const TYPE_APPLICATION = 'application';
+
     public const TYPE_CLIENT = 'client';
 
     /**

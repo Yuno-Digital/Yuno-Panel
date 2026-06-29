@@ -21,7 +21,7 @@ class UserController extends Controller
 
     public function create(): View
     {
-        return view('admin.users.create', ['user' => new User()]);
+        return view('admin.users.create', ['user' => new User]);
     }
 
     public function store(Request $request): RedirectResponse

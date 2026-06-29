@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\View\View;
+use PragmaRX\Google2FAQRCode\Google2FA;
 
 class ProfileController extends Controller
 {
@@ -23,7 +24,7 @@ class ProfileController extends Controller
         // so the user can scan it with their authenticator app.
         $twoFactorQr = null;
         if ($user->two_factor_secret && ! $user->two_factor_confirmed_at) {
-            $google2fa = app(\PragmaRX\Google2FAQRCode\Google2FA::class);
+            $google2fa = app(Google2FA::class);
             $twoFactorQr = $google2fa->getQRCodeInline(
                 config('app.name'),
                 $user->email,

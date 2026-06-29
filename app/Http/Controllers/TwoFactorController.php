@@ -6,12 +6,11 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use PragmaRX\Google2FAQRCode\Google2FA;
+use Symfony\Component\HttpFoundation\Response;
 
 class TwoFactorController extends Controller
 {
-    public function __construct(private readonly Google2FA $google2fa)
-    {
-    }
+    public function __construct(private readonly Google2FA $google2fa) {}
 
     /**
      * Begin setup: generate a (still unconfirmed) secret so the user can scan
@@ -67,7 +66,7 @@ class TwoFactorController extends Controller
     /**
      * Download the user's recovery codes as a plain text file.
      */
-    public function downloadRecoveryCodes(Request $request): \Symfony\Component\HttpFoundation\Response
+    public function downloadRecoveryCodes(Request $request): Response
     {
         $user = $request->user();
         abort_unless($user->hasTwoFactorEnabled(), 404);

@@ -12,9 +12,7 @@ use Illuminate\View\View;
 
 class NodeController extends Controller
 {
-    public function __construct(private readonly WingsClient $wings)
-    {
-    }
+    public function __construct(private readonly WingsClient $wings) {}
 
     public function index(): View
     {
@@ -25,7 +23,7 @@ class NodeController extends Controller
 
     public function create(): View
     {
-        return view('admin.nodes.create', ['node' => new Node()]);
+        return view('admin.nodes.create', ['node' => new Node]);
     }
 
     public function store(Request $request): RedirectResponse
