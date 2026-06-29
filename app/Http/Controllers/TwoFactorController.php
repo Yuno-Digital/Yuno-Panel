@@ -65,6 +65,27 @@ class TwoFactorController extends Controller
     }
 
     /**
+     * Download the user's recovery codes as a plain text file.
+     */
+    public function downloadRecoveryCodes(Request $request): \Symfony\Component\HttpFoundation\Response
+    {
+        $user = $request->user();
+        abort_unless($user->hasTwoFactorEnabled(), 404);
+
+        $codes = $user->two_factor_recovery_codes ?? [];
+
+        $body = "Yuno Panel — two-factor recovery codes\n"
+            ."Account: {$user->email}\n"
+            ."Each code can be used once.\n\n"
+            .implode("\n", $codes)."\n";
+
+        return response($body, 200, [
+            'Content-Type' => 'text/plain',
+            'Content-Disposition' => 'attachment; filename="yuno-recovery-codes.txt"',
+        ]);
+    }
+
+    /**
      * Generate a fresh set of one-time recovery codes.
      *
      * @return array<int, string>

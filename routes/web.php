@@ -41,6 +41,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/profile/two-factor', [TwoFactorController::class, 'store'])->name('profile.2fa.store');
     Route::post('/profile/two-factor/confirm', [TwoFactorController::class, 'confirm'])->name('profile.2fa.confirm');
     Route::delete('/profile/two-factor', [TwoFactorController::class, 'destroy'])->name('profile.2fa.destroy');
+    Route::get('/profile/two-factor/recovery-codes', [TwoFactorController::class, 'downloadRecoveryCodes'])->name('profile.2fa.recovery');
 });
 
 Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {

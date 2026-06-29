@@ -15,17 +15,24 @@
             {{ __('Two-factor authentication is enabled.') }}
         </div>
 
-        @if (session('status') === 'two-factor-confirmed' && session('new_key') === null)
-            <div class="mt-4 rounded-md bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 p-4">
+        <div class="mt-4 rounded-md bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 p-4">
+            <div class="flex items-center justify-between">
                 <p class="text-sm font-medium text-gray-800 dark:text-gray-200">{{ __('Recovery codes') }}</p>
-                <p class="text-xs text-gray-500 dark:text-gray-400 mb-2">{{ __('Store these somewhere safe. Each can be used once if you lose your device.') }}</p>
-                <div class="grid grid-cols-2 gap-1 font-mono text-sm text-gray-700 dark:text-gray-300">
-                    @foreach ($user->two_factor_recovery_codes ?? [] as $code)
-                        <span>{{ $code }}</span>
-                    @endforeach
-                </div>
+                <a href="{{ route('profile.2fa.recovery') }}" download
+                   class="inline-flex items-center gap-1 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:underline">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3" />
+                    </svg>
+                    {{ __('Download') }}
+                </a>
             </div>
-        @endif
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 mb-2">{{ __('Store these somewhere safe. Each can be used once if you lose your device.') }}</p>
+            <div class="grid grid-cols-2 gap-1 font-mono text-sm text-gray-700 dark:text-gray-300">
+                @foreach ($user->two_factor_recovery_codes ?? [] as $code)
+                    <span>{{ $code }}</span>
+                @endforeach
+            </div>
+        </div>
 
         <form method="POST" action="{{ route('profile.2fa.destroy') }}" class="mt-4">
             @csrf @method('DELETE')
