@@ -40,7 +40,7 @@
             {{ __('Scan this QR code with your authenticator app, then enter the generated code to finish.') }}
         </p>
         <div class="mt-3 inline-block rounded-md bg-white p-3 border border-gray-200 dark:border-gray-700">
-            {!! $twoFactorQr !!}
+            <img src="{{ $twoFactorQr }}" alt="{{ __('Two-factor QR code') }}" class="w-48 h-48">
         </div>
 
         <form method="POST" action="{{ route('profile.2fa.confirm') }}" class="mt-4 flex items-end gap-4 max-w-sm">
