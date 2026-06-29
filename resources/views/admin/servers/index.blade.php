@@ -1,13 +1,4 @@
-<x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">{{ __('Admin') }}</h2>
-    </x-slot>
-
-    <div class="py-12">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            @include('admin.partials.subnav')
-            @include('admin.partials.flash')
-
+<x-admin title="Servers">
             <div class="mb-4 flex justify-between items-center">
                 <h3 class="text-lg font-medium text-gray-900">{{ __('Servers') }}</h3>
                 <a href="{{ route('admin.servers.create') }}">
@@ -69,6 +60,4 @@
             </div>
 
             <div class="mt-4">{{ $servers->links() }}</div>
-        </div>
-    </div>
-</x-app-layout>
+</x-admin>
