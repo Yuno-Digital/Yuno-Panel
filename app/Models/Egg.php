@@ -11,7 +11,7 @@ use Illuminate\Support\Str;
 #[Fillable([
     'name', 'author', 'description', 'tags', 'features',
     'docker_image', 'docker_images', 'file_denylist', 'update_url',
-    'startup', 'config_from', 'config_startup', 'config_stop', 'config_files', 'config_logs',
+    'startup', 'startup_commands', 'config_from', 'config_startup', 'config_stop', 'config_files', 'config_logs',
     'copy_script_from', 'script_container', 'script_entry', 'script_is_privileged', 'script_install',
 ])]
 class Egg extends Model
@@ -22,6 +22,7 @@ class Egg extends Model
             'tags' => 'array',
             'features' => 'array',
             'docker_images' => 'array',
+            'startup_commands' => 'array',
             'file_denylist' => 'array',
             'script_is_privileged' => 'boolean',
         ];

@@ -7,6 +7,7 @@ use App\Models\Egg;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class EggController extends Controller
@@ -68,10 +69,14 @@ class EggController extends Controller
             'description' => ['nullable', 'string'],
             'tags' => ['nullable', 'string'],
             'features' => ['nullable', 'string'],
-            'docker_images' => ['required', 'string'],
+            'docker_image_names' => ['required', 'array', 'min:1'],
+            'docker_image_names.*' => ['nullable', 'string', 'max:255'],
+            'docker_image_values' => ['required', 'array', 'min:1'],
+            'docker_image_values.*' => ['nullable', 'string', 'max:255'],
             'file_denylist' => ['nullable', 'string'],
             'update_url' => ['nullable', 'url', 'max:255'],
-            'startup' => ['required', 'string'],
+            'startup_commands' => ['required', 'array', 'min:1'],
+            'startup_commands.*' => ['nullable', 'string'],
             'config_from' => ['nullable', Rule::exists('eggs', 'id')],
             'config_startup' => ['nullable', 'string', 'json'],
             'config_stop' => ['nullable', 'string', 'max:255'],
@@ -83,7 +88,15 @@ class EggController extends Controller
             'script_install' => ['nullable', 'string'],
         ]);
 
-        $images = $this->parseDockerImages($data['docker_images']);
+        $images = $this->zipDockerImages($data['docker_image_names'], $data['docker_image_values']);
+        if ($images === []) {
+            throw ValidationException::withMessages(['docker_image_values' => __('Add at least one Docker image.')]);
+        }
+
+        $startups = $this->cleanList($data['startup_commands']);
+        if ($startups === []) {
+            throw ValidationException::withMessages(['startup_commands' => __('Add at least one startup command.')]);
+        }
 
         return [
             'name' => $data['name'],
@@ -95,7 +108,8 @@ class EggController extends Controller
             'docker_image' => array_values($images)[0] ?? '',
             'file_denylist' => $this->parseList($data['file_denylist'] ?? ''),
             'update_url' => $data['update_url'] ?? null,
-            'startup' => $data['startup'],
+            'startup' => $startups[0],
+            'startup_commands' => $startups,
             'config_from' => $data['config_from'] ?? null,
             'config_startup' => $data['config_startup'] ?? null,
             'config_stop' => $data['config_stop'] ?? null,
@@ -124,27 +138,40 @@ class EggController extends Controller
     }
 
     /**
-     * Parse "Display Name|image:tag" lines into a name => image map. Lines with
-     * no pipe use the image as its own display name.
+     * Combine parallel name/value input arrays into a display-name => image map,
+     * skipping rows with an empty image. A blank name falls back to the image.
      *
+     * @param  array<int, string|null>  $names
+     * @param  array<int, string|null>  $values
      * @return array<string, string>
      */
-    private function parseDockerImages(string $value): array
+    private function zipDockerImages(array $names, array $values): array
     {
         $images = [];
-        foreach (preg_split('/[\r\n]+/', $value) as $line) {
-            $line = trim($line);
-            if ($line === '') {
+        foreach ($values as $i => $image) {
+            $image = trim((string) $image);
+            if ($image === '') {
                 continue;
             }
-            if (str_contains($line, '|')) {
-                [$name, $image] = array_map('trim', explode('|', $line, 2));
-            } else {
-                $name = $image = $line;
-            }
-            $images[$name] = $image;
+            $name = trim((string) ($names[$i] ?? ''));
+            $images[$name !== '' ? $name : $image] = $image;
         }
 
         return $images;
+    }
+
+    /**
+     * Trim and drop empty entries from a list of strings.
+     *
+     * @param  array<int, string|null>  $values
+     * @return array<int, string>
+     */
+    private function cleanList(array $values): array
+    {
+        return collect($values)
+            ->map(fn ($v) => trim((string) $v))
+            ->filter()
+            ->values()
+            ->all();
     }
 }
