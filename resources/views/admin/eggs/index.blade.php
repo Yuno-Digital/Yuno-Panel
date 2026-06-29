@@ -1,9 +1,28 @@
 <x-admin title="Eggs">
-    <div class="mb-4 flex justify-between items-center">
-        <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100">{{ __('Eggs') }}</h3>
-        <a href="{{ route('admin.eggs.create') }}">
-            <x-primary-button>{{ __('New egg') }}</x-primary-button>
-        </a>
+    <div x-data="{ importing: false }" class="mb-4">
+        <div class="flex justify-between items-center">
+            <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100">{{ __('Eggs') }}</h3>
+            <div class="flex items-center gap-2">
+                <x-secondary-button type="button" @click="importing = ! importing">{{ __('Import egg') }}</x-secondary-button>
+                <a href="{{ route('admin.eggs.create') }}">
+                    <x-primary-button>{{ __('New egg') }}</x-primary-button>
+                </a>
+            </div>
+        </div>
+
+        <div x-show="importing" x-cloak class="mt-4 bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6 ring-1 ring-gray-100 dark:ring-gray-700/60">
+            <form method="POST" action="{{ route('admin.eggs.import') }}" enctype="multipart/form-data" class="flex flex-wrap items-end gap-4">
+                @csrf
+                <div class="flex-1 min-w-64">
+                    <x-input-label for="egg_file" :value="__('Egg JSON file')" />
+                    <input id="egg_file" name="egg_file" type="file" accept=".json,application/json" required
+                           class="mt-1 block w-full text-sm text-gray-700 dark:text-gray-300 file:mr-3 file:rounded-md file:border-0 file:bg-indigo-600 file:px-4 file:py-2 file:text-white file:cursor-pointer">
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ __('Upload a Pterodactyl / Pelican egg export (.json).') }}</p>
+                    <x-input-error :messages="$errors->get('egg_file')" class="mt-2" />
+                </div>
+                <x-primary-button>{{ __('Import') }}</x-primary-button>
+            </form>
+        </div>
     </div>
 
     <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg overflow-hidden">

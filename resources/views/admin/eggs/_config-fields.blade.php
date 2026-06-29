@@ -1,6 +1,6 @@
 @php
     $ta = 'mt-1 block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm';
-    $row = 'block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm text-sm';
+    $row = 'block border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm text-sm';
 
     $initialImages = collect($egg->docker_images ?? [])
         ->map(fn ($img, $name) => ['name' => $name === $img ? '' : (string) $name, 'image' => (string) $img])
@@ -51,8 +51,8 @@
         <div class="space-y-2">
             <template x-for="(img, i) in images" :key="i">
                 <div class="flex items-center gap-2">
-                    <input type="text" name="docker_image_names[]" x-model="images[i].name" placeholder="{{ __('Display name (optional)') }}" class="{{ $row }} w-1/3">
-                    <input type="text" name="docker_image_values[]" x-model="images[i].image" placeholder="ghcr.io/pelican-eggs/yolks:java_21" class="{{ $row }} flex-1 font-mono">
+                    <input type="text" name="docker_image_names[]" x-model="images[i].name" placeholder="{{ __('Display name (optional)') }}" class="{{ $row }} w-44 shrink-0">
+                    <input type="text" name="docker_image_values[]" x-model="images[i].image" placeholder="ghcr.io/pelican-eggs/yolks:java_21" class="{{ $row }} flex-1 min-w-0 font-mono">
                     <button type="button" @click="images.splice(i, 1)" x-show="images.length > 1"
                             class="shrink-0 w-9 h-9 rounded-md text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30" title="{{ __('Remove') }}">&times;</button>
                 </div>
@@ -73,7 +73,7 @@
             <template x-for="(cmd, i) in cmds" :key="i">
                 <div class="flex items-center gap-2">
                     <span class="shrink-0 text-xs text-gray-400 w-4 text-right" x-text="i + 1"></span>
-                    <input type="text" name="startup_commands[]" x-model="cmds[i].v" placeholder="java -Xmx@{{SERVER_MEMORY}}M -jar server.jar" class="{{ $row }} flex-1 font-mono">
+                    <input type="text" name="startup_commands[]" x-model="cmds[i].v" placeholder="java -Xmx@{{SERVER_MEMORY}}M -jar server.jar" class="{{ $row }} flex-1 min-w-0 font-mono">
                     <button type="button" @click="cmds.splice(i, 1)" x-show="cmds.length > 1"
                             class="shrink-0 w-9 h-9 rounded-md text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30" title="{{ __('Remove') }}">&times;</button>
                 </div>
