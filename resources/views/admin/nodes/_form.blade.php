@@ -44,8 +44,8 @@
         @if ($node->exists && $node->memory_mb)
             <span class="block mt-1 text-gray-800">
                 {{ __('Currently detected:') }}
-                <strong>{{ number_format($node->memory_mb) }} MB</strong> {{ __('RAM') }},
-                <strong>{{ number_format($node->disk_mb) }} MB</strong> {{ __('disk') }}.
+                <strong>{{ \App\Support\Format::size($node->memory_mb) }}</strong> {{ __('RAM') }},
+                <strong>{{ \App\Support\Format::size($node->disk_mb) }}</strong> {{ __('disk') }}.
             </span>
         @endif
     </div>

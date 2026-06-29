@@ -40,7 +40,7 @@
                                     </td>
                                     <td class="px-6 py-4">{{ $server->node?->name ?? '—' }}</td>
                                     <td class="px-6 py-4">{{ $server->owner?->name ?? '—' }}</td>
-                                    <td class="px-6 py-4">{{ number_format($server->memory_mb) }} MB</td>
+                                    <td class="px-6 py-4">{{ \App\Support\Format::size($server->memory_mb) }}</td>
                                     <td class="px-6 py-4">{{ $server->port ?? '—' }}</td>
                                 </tr>
                             @endforeach

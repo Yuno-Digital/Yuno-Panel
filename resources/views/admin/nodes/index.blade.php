@@ -27,6 +27,7 @@
                                 <th class="px-6 py-3">{{ __('Status') }}</th>
                                 <th class="px-6 py-3">{{ __('Servers') }}</th>
                                 <th class="px-6 py-3">{{ __('Memory') }}</th>
+                                <th class="px-6 py-3">{{ __('Disk') }}</th>
                                 <th class="px-6 py-3 text-right">{{ __('Actions') }}</th>
                             </tr>
                         </thead>
@@ -41,9 +42,14 @@
                                         </span>
                                     </td>
                                     <td class="px-6 py-4">{{ $node->servers_count }}</td>
-                                    <td class="px-6 py-4">{{ number_format($node->memory_mb) }} MB</td>
+                                    <td class="px-6 py-4">{{ \App\Support\Format::size($node->memory_mb) }}</td>
+                                    <td class="px-6 py-4">{{ \App\Support\Format::size($node->disk_mb) }}</td>
                                     <td class="px-6 py-4">
                                         <div class="flex justify-end gap-2">
+                                            <form method="POST" action="{{ route('admin.nodes.refresh', $node) }}">
+                                                @csrf
+                                                <button class="text-gray-600 hover:underline">{{ __('Refresh') }}</button>
+                                            </form>
                                             <a href="{{ route('admin.nodes.edit', $node) }}" class="text-indigo-600 hover:underline">{{ __('Edit') }}</a>
                                             <form method="POST" action="{{ route('admin.nodes.destroy', $node) }}"
                                                   onsubmit="return confirm('Delete this node?');">

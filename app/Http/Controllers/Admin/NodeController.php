@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Node;
 use App\Services\WingsClient;
+use App\Support\Format;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -56,6 +57,14 @@ class NodeController extends Controller
     }
 
     /**
+     * Manually re-query a single node's daemon now.
+     */
+    public function refresh(Node $node): RedirectResponse
+    {
+        return redirect()->route('admin.nodes.index')->with($this->detect($node));
+    }
+
+    /**
      * Contact the node's daemon to auto-detect memory/disk and online status.
      * Returns the flash payload describing the outcome.
      *
@@ -63,24 +72,15 @@ class NodeController extends Controller
      */
     private function detect(Node $node): array
     {
-        $system = $this->wings->system($node);
-
-        if ($system === null) {
-            $node->forceFill(['is_online' => false])->save();
-
+        if (! $this->wings->refresh($node)) {
             return ['error' => "Saved, but the daemon at {$node->fqdn}:{$node->daemon_port} could not be reached. Check the FQDN, port and token."];
         }
 
-        $node->forceFill([
-            'is_online' => true,
-            'memory_mb' => (int) ($system['memory_mb'] ?? 0),
-            'disk_mb' => (int) ($system['disk_mb'] ?? 0),
-        ])->save();
-
-        $memGb = round($node->memory_mb / 1024, 1);
-        $diskGb = round($node->disk_mb / 1024, 1);
-
-        return ['status' => "Node online. Detected {$memGb} GB RAM and {$diskGb} GB disk."];
+        return ['status' => sprintf(
+            'Node online. Detected %s RAM and %s disk.',
+            Format::size($node->memory_mb),
+            Format::size($node->disk_mb),
+        )];
     }
 
     /**

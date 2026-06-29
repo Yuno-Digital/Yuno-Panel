@@ -27,6 +27,7 @@ Route::middleware('auth')->group(function () {
 
 Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/', AdminDashboardController::class)->name('dashboard');
+    Route::post('nodes/{node}/refresh', [AdminNodeController::class, 'refresh'])->name('nodes.refresh');
     Route::resource('nodes', AdminNodeController::class)->except('show');
     Route::resource('servers', AdminServerController::class)->except('show');
     Route::resource('users', AdminUserController::class)->except('show');
