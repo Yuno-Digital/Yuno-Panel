@@ -38,4 +38,14 @@ class Node extends Model
     {
         return $this->hasMany(Server::class);
     }
+
+    /**
+     * IP:port allocations available on this node.
+     *
+     * @return HasMany<Allocation, $this>
+     */
+    public function allocations(): HasMany
+    {
+        return $this->hasMany(Allocation::class);
+    }
 }

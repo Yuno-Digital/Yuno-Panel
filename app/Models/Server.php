@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 
 #[Fillable([
-    'name', 'node_id', 'owner_id', 'egg_id', 'docker_image', 'startup',
+    'name', 'node_id', 'allocation_id', 'owner_id', 'egg_id', 'docker_image', 'startup',
     'status', 'memory_mb', 'disk_mb', 'cpu', 'swap_mb', 'port',
 ])]
 class Server extends Model
@@ -63,6 +63,16 @@ class Server extends Model
     public function egg(): BelongsTo
     {
         return $this->belongsTo(Egg::class);
+    }
+
+    /**
+     * The server's primary IP:port allocation.
+     *
+     * @return BelongsTo<Allocation, $this>
+     */
+    public function allocation(): BelongsTo
+    {
+        return $this->belongsTo(Allocation::class);
     }
 
     /**

@@ -36,6 +36,8 @@ class NodeController extends Controller
 
     public function edit(Node $node): View
     {
+        $node->load(['allocations' => fn ($q) => $q->orderBy('ip')->orderBy('port'), 'allocations.server']);
+
         return view('admin.nodes.edit', compact('node'));
     }
 
