@@ -15,6 +15,7 @@
                             <tr class="text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                 <th class="px-6 py-3">{{ __('Name') }}</th>
                                 <th class="px-6 py-3">{{ __('Status') }}</th>
+                                <th class="px-6 py-3">{{ __('Egg') }}</th>
                                 <th class="px-6 py-3">{{ __('Node') }}</th>
                                 <th class="px-6 py-3">{{ __('Owner') }}</th>
                                 <th class="px-6 py-3">{{ __('Memory') }}</th>
@@ -38,6 +39,7 @@
                                             {{ ucfirst($server->status) }}
                                         </span>
                                     </td>
+                                    <td class="px-6 py-4">{{ $server->egg?->name ?? '—' }}</td>
                                     <td class="px-6 py-4">{{ $server->node?->name ?? '—' }}</td>
                                     <td class="px-6 py-4">{{ $server->owner?->name ?? '—' }}</td>
                                     <td class="px-6 py-4">{{ \App\Support\Format::size($server->memory_mb) }}</td>

@@ -5,9 +5,13 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 
-#[Fillable(['name', 'node_id', 'owner_id', 'status', 'memory_mb', 'disk_mb', 'port'])]
+#[Fillable([
+    'name', 'node_id', 'owner_id', 'egg_id', 'docker_image', 'startup',
+    'status', 'memory_mb', 'disk_mb', 'cpu', 'swap_mb', 'port',
+])]
 class Server extends Model
 {
     protected function casts(): array
@@ -15,6 +19,8 @@ class Server extends Model
         return [
             'memory_mb' => 'integer',
             'disk_mb' => 'integer',
+            'cpu' => 'integer',
+            'swap_mb' => 'integer',
             'port' => 'integer',
         ];
     }
@@ -47,5 +53,25 @@ class Server extends Model
     public function owner(): BelongsTo
     {
         return $this->belongsTo(User::class, 'owner_id');
+    }
+
+    /**
+     * The egg this server was created from.
+     *
+     * @return BelongsTo<Egg, $this>
+     */
+    public function egg(): BelongsTo
+    {
+        return $this->belongsTo(Egg::class);
+    }
+
+    /**
+     * The server's filled-in egg variable values.
+     *
+     * @return HasMany<ServerVariable, $this>
+     */
+    public function variables(): HasMany
+    {
+        return $this->hasMany(ServerVariable::class);
     }
 }
