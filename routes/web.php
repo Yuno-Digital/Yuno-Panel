@@ -30,6 +30,13 @@ Route::middleware('auth')->group(function () {
     Route::get('/servers', [ServerController::class, 'index'])->name('servers.index');
     Route::get('/servers/{server}', [ServerController::class, 'show'])->name('servers.show');
     Route::patch('/servers/{server}', [ServerController::class, 'update'])->name('servers.update');
+    Route::post('/servers/{server}/install', [ServerController::class, 'install'])->name('servers.install');
+    Route::post('/servers/{server}/power', [ServerController::class, 'power'])->name('servers.power');
+    Route::get('/servers/{server}/stats', [ServerController::class, 'stats'])->name('servers.stats');
+    Route::get('/servers/{server}/logs', [ServerController::class, 'logs'])->name('servers.logs');
+    Route::get('/servers/{server}/files', [ServerController::class, 'files'])->name('servers.files');
+    Route::get('/servers/{server}/files/contents', [ServerController::class, 'fileRead'])->name('servers.files.read');
+    Route::post('/servers/{server}/files/write', [ServerController::class, 'fileWrite'])->name('servers.files.write');
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
