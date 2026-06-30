@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Server;
+use App\Services\WingsClient;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -10,6 +12,8 @@ use Illuminate\View\View;
 
 class ServerController extends Controller
 {
+    public function __construct(private readonly WingsClient $wings) {}
+
     /**
      * List the servers visible to the current user.
      * Admins see every server; regular users only their own.
@@ -63,6 +67,92 @@ class ServerController extends Controller
         }
 
         return redirect()->route('servers.show', $server)->with('status', 'Settings saved.');
+    }
+
+    /**
+     * (Re)install the server's container on its node.
+     */
+    public function install(Request $request, Server $server): RedirectResponse
+    {
+        $this->authorizeServer($request, $server);
+        $server->load(['node', 'allocation', 'variables.eggVariable']);
+
+        $ok = $this->wings->createContainer($server);
+
+        return back()->with($ok ? 'status' : 'error',
+            $ok ? __('Server installed on the node.') : __('Could not reach the node daemon.'));
+    }
+
+    /**
+     * Send a power action to the daemon.
+     */
+    public function power(Request $request, Server $server): RedirectResponse
+    {
+        $this->authorizeServer($request, $server);
+        $data = $request->validate(['action' => ['required', 'in:start,stop,restart']]);
+
+        $ok = $this->wings->power($server->load('node'), $data['action']);
+
+        return back()->with($ok ? 'status' : 'error',
+            $ok ? __('Power action sent: :a', ['a' => $data['action']]) : __('Could not reach the node daemon.'));
+    }
+
+    /**
+     * Live resource stats (JSON, polled by the console page).
+     */
+    public function stats(Request $request, Server $server): JsonResponse
+    {
+        $this->authorizeServer($request, $server);
+
+        return response()->json($this->wings->stats($server->load('node')) ?? ['state' => 'unreachable']);
+    }
+
+    /**
+     * Console log tail (JSON).
+     */
+    public function logs(Request $request, Server $server): JsonResponse
+    {
+        $this->authorizeServer($request, $server);
+
+        return response()->json(['logs' => $this->wings->logs($server->load('node'))]);
+    }
+
+    /**
+     * List files in the server's volume (JSON).
+     */
+    public function files(Request $request, Server $server): JsonResponse
+    {
+        $this->authorizeServer($request, $server);
+        $path = (string) $request->query('path', '/');
+
+        return response()->json(['path' => $path, 'entries' => $this->wings->files($server->load('node'), $path)]);
+    }
+
+    /**
+     * Read a file (JSON).
+     */
+    public function fileRead(Request $request, Server $server): JsonResponse
+    {
+        $this->authorizeServer($request, $server);
+        $path = (string) $request->query('path', '');
+
+        return response()->json(['path' => $path, 'contents' => $this->wings->fileContents($server->load('node'), $path)]);
+    }
+
+    /**
+     * Write a file.
+     */
+    public function fileWrite(Request $request, Server $server): JsonResponse
+    {
+        $this->authorizeServer($request, $server);
+        $data = $request->validate([
+            'path' => ['required', 'string'],
+            'contents' => ['nullable', 'string'],
+        ]);
+
+        $ok = $this->wings->writeFile($server->load('node'), $data['path'], $data['contents'] ?? '');
+
+        return response()->json(['saved' => $ok], $ok ? 200 : 502);
     }
 
     /**
