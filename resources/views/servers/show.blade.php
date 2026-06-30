@@ -29,9 +29,11 @@
             {{-- Status + power --}}
             <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-4 flex flex-wrap items-center gap-4">
                 <span class="inline-flex items-center gap-2 text-sm font-semibold">
-                    <span class="w-2.5 h-2.5 rounded-full"
-                          :class="stats.state === 'running' ? 'bg-green-500' : (stats.state === 'unreachable' ? 'bg-red-500' : 'bg-gray-400')"></span>
-                    <span class="text-gray-700 dark:text-gray-200 capitalize" x-text="stats.state || 'unknown'"></span>
+                    <span class="w-2.5 h-2.5 rounded-full" :class="stateColor"></span>
+                    <span class="text-gray-700 dark:text-gray-200" x-text="stateLabel"></span>
+                </span>
+                <span x-show="stats.state === 'missing'" x-cloak class="text-xs text-gray-500 dark:text-gray-400">
+                    {{ __('Not installed yet — click Install to create the server.') }}
                 </span>
                 <div class="text-sm text-gray-500 dark:text-gray-400">
                     CPU <span class="font-medium text-gray-800 dark:text-gray-200" x-text="(stats.cpu_percent ?? 0).toFixed(1) + '%'"></span>
@@ -138,6 +140,14 @@
         function serverConsole(c) {
             return {
                 tab: c.tab, stats: { state: 'loading' }, logs: '',
+                labels: { running: 'Running', exited: 'Offline', created: 'Installed (stopped)', restarting: 'Restarting', missing: 'Not installed', loading: 'Loading…', unreachable: 'Node unreachable' },
+                get stateLabel() { return this.labels[this.stats.state] || (this.stats.state || 'Unknown'); },
+                get stateColor() {
+                    if (this.stats.state === 'running') return 'bg-green-500';
+                    if (this.stats.state === 'unreachable') return 'bg-red-500';
+                    if (this.stats.state === 'restarting' || this.stats.state === 'loading') return 'bg-amber-400';
+                    return 'bg-gray-400';
+                },
                 init() { this.poll(); setInterval(() => this.poll(), 3000); },
                 async poll() {
                     try {
