@@ -33,7 +33,10 @@
         eggId: '{{ old('egg_id', $server->egg_id) }}',
         dockerImage: @js(old('docker_image', $server->docker_image)),
         startup: @js(old('startup', $server->startup)),
-        vars: {{ Illuminate\Support\Js::from(old('variables', $serverValues)) }}
+        vars: {{ Illuminate\Support\Js::from(old('variables', $serverValues)) }},
+        nodeId: '{{ old('node_id', $server->node_id) }}',
+        allocations: {{ Illuminate\Support\Js::from($allocations) }},
+        allocationId: '{{ old('allocation_id', $server->allocation_id) }}'
      })" x-init="init()" class="space-y-6">
 
     {{-- Basics --}}
@@ -58,10 +61,10 @@
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
         <div>
             <x-input-label for="node_id" :value="__('Node')" />
-            <select id="node_id" name="node_id" class="{{ $inp }}" required>
+            <select id="node_id" name="node_id" class="{{ $inp }}" x-model="nodeId" required>
                 <option value="">{{ __('— Select node —') }}</option>
                 @foreach ($nodes as $n)
-                    <option value="{{ $n->id }}" @selected(old('node_id', $server->node_id) == $n->id)>{{ $n->name }}</option>
+                    <option value="{{ $n->id }}">{{ $n->name }}</option>
                 @endforeach
             </select>
             <x-input-error :messages="$errors->get('node_id')" class="mt-2" />
@@ -74,6 +77,21 @@
                 @endforeach
             </select>
         </div>
+    </div>
+
+    {{-- Allocation (depends on node; must be created on the node first) --}}
+    <div>
+        <x-input-label for="allocation_id" :value="__('Allocation (IP:port)')" />
+        <select id="allocation_id" name="allocation_id" class="{{ $inp }}" x-model="allocationId" required>
+            <option value="">{{ __('— Select allocation —') }}</option>
+            <template x-for="a in nodeAllocations" :key="a.id">
+                <option :value="a.id" x-text="a.ip + ':' + a.port"></option>
+            </template>
+        </select>
+        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400" x-show="nodeId && nodeAllocations.length === 0">
+            {{ __('This node has no free allocations. Create some on the node first.') }}
+        </p>
+        <x-input-error :messages="$errors->get('allocation_id')" class="mt-2" />
     </div>
 
     {{-- Egg selection --}}
@@ -134,7 +152,7 @@
     </div>
 
     {{-- Resource limits --}}
-    <div class="border-t border-gray-200 dark:border-gray-700 pt-6 grid grid-cols-2 sm:grid-cols-5 gap-4">
+    <div class="border-t border-gray-200 dark:border-gray-700 pt-6 grid grid-cols-2 sm:grid-cols-4 gap-4">
         <div>
             <x-input-label for="memory_mb" :value="__('Memory (MB)')" />
             <x-text-input id="memory_mb" name="memory_mb" type="number" class="mt-1 block w-full" :value="old('memory_mb', $server->memory_mb)" required />
@@ -154,10 +172,6 @@
             <x-text-input id="cpu" name="cpu" type="number" class="mt-1 block w-full" :value="old('cpu', $server->cpu ?? 0)" required />
             <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ __('0 = unlimited') }}</p>
         </div>
-        <div>
-            <x-input-label for="port" :value="__('Port')" />
-            <x-text-input id="port" name="port" type="number" class="mt-1 block w-full" :value="old('port', $server->port)" />
-        </div>
     </div>
 
     <div class="flex items-center gap-4">
@@ -174,10 +188,21 @@
             dockerImage: initial.dockerImage || '',
             startup: initial.startup || '',
             vars: initial.vars || {},
+            nodeId: initial.nodeId || '',
+            allocations: initial.allocations || [],
+            allocationId: initial.allocationId || '',
 
             init() {
                 // Populate defaults if an egg is already selected (edit / old input).
                 if (this.eggId) this.onEggChange(true);
+            },
+
+            // Free allocations on the selected node (plus the one already bound
+            // to this server, so it stays selectable on edit).
+            get nodeAllocations() {
+                return this.allocations.filter(a =>
+                    String(a.node_id) === String(this.nodeId)
+                    && (a.server_id === null || String(a.id) === String(this.allocationId)));
             },
 
             get egg() {

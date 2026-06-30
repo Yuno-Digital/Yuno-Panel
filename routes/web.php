@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\AdminDashboardController;
+use App\Http\Controllers\Admin\AllocationController;
 use App\Http\Controllers\Admin\ApiKeyController;
 use App\Http\Controllers\Admin\EggController;
 use App\Http\Controllers\Admin\EggImportController;
@@ -27,6 +28,8 @@ Route::get('/dashboard', DashboardController::class)
 
 Route::middleware('auth')->group(function () {
     Route::get('/servers', [ServerController::class, 'index'])->name('servers.index');
+    Route::get('/servers/{server}', [ServerController::class, 'show'])->name('servers.show');
+    Route::patch('/servers/{server}', [ServerController::class, 'update'])->name('servers.update');
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
@@ -49,6 +52,8 @@ Route::middleware('auth')->group(function () {
 Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/', AdminDashboardController::class)->name('dashboard');
     Route::post('nodes/{node}/refresh', [AdminNodeController::class, 'refresh'])->name('nodes.refresh');
+    Route::post('nodes/{node}/allocations', [AllocationController::class, 'store'])->name('nodes.allocations.store');
+    Route::delete('nodes/{node}/allocations/{allocation}', [AllocationController::class, 'destroy'])->name('nodes.allocations.destroy');
     Route::resource('nodes', AdminNodeController::class)->except('show');
     Route::resource('servers', AdminServerController::class)->except('show');
     Route::resource('users', AdminUserController::class)->except('show');

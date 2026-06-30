@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Allocation;
 use App\Models\Egg;
 use App\Models\Node;
 use App\Models\Server;
@@ -11,6 +12,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class ServerController extends Controller
@@ -38,6 +40,7 @@ class ServerController extends Controller
 
         $server = DB::transaction(function () use ($data, $egg, $request) {
             $server = Server::create($data);
+            $this->assignAllocation($server, $data['allocation_id']);
             $this->syncVariables($server, $egg, $request->input('variables', []));
 
             return $server;
@@ -60,6 +63,7 @@ class ServerController extends Controller
 
         DB::transaction(function () use ($server, $data, $egg, $request) {
             $server->update($data);
+            $this->assignAllocation($server, $data['allocation_id']);
             $this->syncVariables($server, $egg, $request->input('variables', []));
         });
 
@@ -99,8 +103,32 @@ class ServerController extends Controller
             'nodes' => Node::orderBy('name')->get(),
             'users' => User::orderBy('name')->get(),
             'eggs' => Egg::with('variables')->orderBy('name')->get(),
+            'allocations' => Allocation::orderBy('ip')->orderBy('port')->get(['id', 'node_id', 'ip', 'port', 'server_id']),
             'statuses' => self::STATUSES,
         ];
+    }
+
+    /**
+     * Bind the server to an allocation, releasing any previous one and marking
+     * the chosen allocation as in use.
+     */
+    private function assignAllocation(Server $server, int $allocationId): void
+    {
+        $allocation = Allocation::findOrFail($allocationId);
+
+        if ((int) $allocation->node_id !== (int) $server->node_id) {
+            throw ValidationException::withMessages(['allocation_id' => __('That allocation is not on the selected node.')]);
+        }
+        if ($allocation->server_id !== null && (int) $allocation->server_id !== (int) $server->id) {
+            throw ValidationException::withMessages(['allocation_id' => __('That allocation is already in use.')]);
+        }
+
+        Allocation::where('server_id', $server->id)
+            ->where('id', '!=', $allocation->id)
+            ->update(['server_id' => null]);
+
+        $allocation->update(['server_id' => $server->id]);
+        $server->update(['allocation_id' => $allocation->id, 'port' => $allocation->port]);
     }
 
     /**
@@ -124,7 +152,7 @@ class ServerController extends Controller
             'disk_mb' => ['required', 'integer', 'min:0'],
             'cpu' => ['required', 'integer', 'min:0'],
             'swap_mb' => ['required', 'integer', 'min:0'],
-            'port' => ['nullable', 'integer', 'min:1', 'max:65535'],
+            'allocation_id' => ['required', 'exists:allocations,id'],
         ];
 
         // Apply each egg variable's own validation rules to its submitted value.

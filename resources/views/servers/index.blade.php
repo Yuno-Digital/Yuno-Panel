@@ -19,13 +19,16 @@
                                 <th class="px-6 py-3">{{ __('Node') }}</th>
                                 <th class="px-6 py-3">{{ __('Owner') }}</th>
                                 <th class="px-6 py-3">{{ __('Memory') }}</th>
-                                <th class="px-6 py-3">{{ __('Port') }}</th>
+                                <th class="px-6 py-3">{{ __('Address') }}</th>
+                                <th class="px-6 py-3 text-right">{{ __('Actions') }}</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
                             @foreach ($servers as $server)
                                 <tr class="text-sm text-gray-700 dark:text-gray-300">
-                                    <td class="px-6 py-4 font-medium text-gray-900 dark:text-gray-100">{{ $server->name }}</td>
+                                    <td class="px-6 py-4 font-medium text-gray-900 dark:text-gray-100">
+                                        <a href="{{ route('servers.show', $server) }}" class="hover:text-indigo-600 hover:underline">{{ $server->name }}</a>
+                                    </td>
                                     <td class="px-6 py-4">
                                         @php
                                             $color = match ($server->status) {
@@ -41,7 +44,10 @@
                                     <td class="px-6 py-4">{{ $server->node?->name ?? '—' }}</td>
                                     <td class="px-6 py-4">{{ $server->owner?->name ?? '—' }}</td>
                                     <td class="px-6 py-4">{{ \App\Support\Format::size($server->memory_mb) }}</td>
-                                    <td class="px-6 py-4">{{ $server->port ?? '—' }}</td>
+                                    <td class="px-6 py-4 font-mono text-xs">{{ $server->allocation?->address() ?? '—' }}</td>
+                                    <td class="px-6 py-4 text-right">
+                                        <a href="{{ route('servers.show', $server) }}" class="text-indigo-600 hover:underline">{{ __('Manage') }}</a>
+                                    </td>
                                 </tr>
                             @endforeach
                         </tbody>
