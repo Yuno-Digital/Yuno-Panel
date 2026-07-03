@@ -81,18 +81,8 @@ class ServerController extends Controller
 
         return back()->with($ok ? 'status' : 'error',
             $ok
-                ? __('Installation started — watch the progress in the Install tab.')
+                ? __('Installation started — watch the progress in the console.')
                 : __('Could not reach the node daemon.'));
-    }
-
-    /**
-     * Live install log (JSON, polled by the Install tab).
-     */
-    public function installLog(Request $request, Server $server): JsonResponse
-    {
-        $this->authorizeServer($request, $server);
-
-        return response()->json(['log' => $this->wings->installLog($server->load('node'))]);
     }
 
     /**
