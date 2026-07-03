@@ -14,6 +14,7 @@
     <div class="py-10" x-data="serverConsole({
             statsUrl: '{{ route('servers.stats', $server) }}',
             logsUrl: '{{ route('servers.logs', $server) }}',
+            installLogUrl: '{{ route('servers.install-log', $server) }}',
             powerUrl: '{{ route('servers.power', $server) }}',
             csrf: '{{ csrf_token() }}',
             tab: 'console'
@@ -52,7 +53,7 @@
 
             {{-- Tabs --}}
             <nav class="inline-flex items-center gap-1 rounded-xl bg-gray-100 dark:bg-gray-800/80 p-1.5 ring-1 ring-gray-200 dark:ring-gray-700">
-                @foreach (['console' => __('Console'), 'files' => __('Files'), 'settings' => __('Settings')] as $key => $label)
+                @foreach (['console' => __('Console'), 'install' => __('Install'), 'files' => __('Files'), 'settings' => __('Settings')] as $key => $label)
                     <button type="button" @click="tab = '{{ $key }}'"
                             :class="tab === '{{ $key }}' ? 'bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-300 shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'"
                             class="rounded-lg px-4 py-2 text-sm font-semibold">{{ $label }}</button>
@@ -62,6 +63,12 @@
             {{-- Console --}}
             <div x-show="tab === 'console'">
                 <pre x-ref="console" class="h-96 overflow-auto rounded-lg bg-gray-900 text-gray-100 text-xs font-mono p-4 whitespace-pre-wrap" x-text="logs || '{{ __('Waiting for output…') }}'"></pre>
+            </div>
+
+            {{-- Install log --}}
+            <div x-show="tab === 'install'" x-cloak>
+                <p class="mb-2 text-sm text-gray-500 dark:text-gray-400">{{ __('Live output of the installation (image download + egg install script).') }}</p>
+                <pre x-ref="install" class="h-96 overflow-auto rounded-lg bg-gray-900 text-gray-100 text-xs font-mono p-4 whitespace-pre-wrap" x-text="installLog || '{{ __('No installation has run yet. Click Install.') }}'"></pre>
             </div>
 
             {{-- Files --}}
@@ -139,7 +146,7 @@
     <script>
         function serverConsole(c) {
             return {
-                tab: c.tab, stats: { state: 'loading' }, logs: '',
+                tab: c.tab, stats: { state: 'loading' }, logs: '', installLog: '',
                 labels: { running: 'Running', exited: 'Offline', created: 'Installed (stopped)', restarting: 'Restarting', missing: 'Not installed', loading: 'Loading…', unreachable: 'Node unreachable' },
                 get stateLabel() { return this.labels[this.stats.state] || (this.stats.state || 'Unknown'); },
                 get stateColor() {
@@ -148,14 +155,19 @@
                     if (this.stats.state === 'restarting' || this.stats.state === 'loading') return 'bg-amber-400';
                     return 'bg-gray-400';
                 },
+                strip(s) { return (s || '').replace(/\x1b\[[0-9;]*m/g, ''); },
                 init() { this.poll(); setInterval(() => this.poll(), 3000); },
                 async poll() {
                     try {
                         this.stats = await (await fetch(c.statsUrl)).json();
                         const l = await (await fetch(c.logsUrl)).json();
-                        const atBottom = true;
                         this.logs = l.logs || '';
-                        this.$nextTick(() => { if (this.$refs.console) this.$refs.console.scrollTop = this.$refs.console.scrollHeight; });
+                        const il = await (await fetch(c.installLogUrl)).json();
+                        this.installLog = this.strip(il.log);
+                        this.$nextTick(() => {
+                            if (this.$refs.console) this.$refs.console.scrollTop = this.$refs.console.scrollHeight;
+                            if (this.$refs.install) this.$refs.install.scrollTop = this.$refs.install.scrollHeight;
+                        });
                     } catch (e) { this.stats = { state: 'unreachable' }; }
                 },
                 async power(action) {

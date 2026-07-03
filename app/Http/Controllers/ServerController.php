@@ -75,14 +75,24 @@ class ServerController extends Controller
     public function install(Request $request, Server $server): RedirectResponse
     {
         $this->authorizeServer($request, $server);
-        $server->load(['node', 'allocation', 'variables.eggVariable']);
+        $server->load(['node', 'egg', 'allocation', 'variables.eggVariable']);
 
         $ok = $this->wings->createContainer($server);
 
         return back()->with($ok ? 'status' : 'error',
             $ok
-                ? __('Installation started. The image may take a moment to download — refresh in a bit.')
+                ? __('Installation started — watch the progress in the Install tab.')
                 : __('Could not reach the node daemon.'));
+    }
+
+    /**
+     * Live install log (JSON, polled by the Install tab).
+     */
+    public function installLog(Request $request, Server $server): JsonResponse
+    {
+        $this->authorizeServer($request, $server);
+
+        return response()->json(['log' => $this->wings->installLog($server->load('node'))]);
     }
 
     /**
