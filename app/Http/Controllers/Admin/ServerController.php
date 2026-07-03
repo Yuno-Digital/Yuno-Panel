@@ -52,7 +52,7 @@ class ServerController extends Controller
         // Auto-install on the node (like Pelican). If the daemon is unreachable
         // the server is still created and can be installed later.
         $installed = $this->wings->createContainer(
-            $server->load(['node', 'allocation', 'variables.eggVariable'])
+            $server->load(['node', 'egg', 'allocation', 'variables.eggVariable'])
         );
 
         return redirect()->route('admin.servers.edit', $server)->with(

@@ -102,10 +102,21 @@ class WingsClient
                 'cpu' => $server->cpu,
                 'ports' => array_values(array_filter([$server->allocation?->port])),
                 'env' => $env,
+                'install_script' => (string) $server->egg?->script_install,
+                'install_container' => (string) $server->egg?->script_container,
+                'install_entry' => (string) $server->egg?->script_entry,
             ])->successful();
         } catch (Throwable) {
             return false;
         }
+    }
+
+    /**
+     * The streamed install log for a server.
+     */
+    public function installLog(Server $server): string
+    {
+        return (string) ($this->get($server, '/install-log')['log'] ?? '');
     }
 
     /**
