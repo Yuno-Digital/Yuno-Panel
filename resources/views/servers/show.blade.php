@@ -139,11 +139,14 @@
                                     <td class="px-2 py-2 text-gray-400 dark:text-gray-500 whitespace-nowrap hidden sm:table-cell" x-text="fmtDate(e.modified)"></td>
                                     <td class="px-4 py-2">
                                         <div class="flex items-center justify-end gap-0.5 text-gray-400">
-                                            {{-- Open / view (disabled for binary files) --}}
+                                            {{-- Directory: open · File: edit (disabled for binary files) --}}
                                             <button @click="open(e)" :disabled="!e.directory && isBinary(e.name)"
-                                                    :title="!e.directory && isBinary(e.name) ? '{{ __('Binary file — cannot be edited') }}' : '{{ __('Open') }}'"
+                                                    :title="e.directory ? '{{ __('Open') }}' : (isBinary(e.name) ? '{{ __('Binary file — cannot be edited') }}' : '{{ __('Edit') }}')"
                                                     class="p-1.5 rounded hover:text-indigo-600 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:pointer-events-none">
-                                                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                                                {{-- Folder-open icon for directories --}}
+                                                <svg x-show="e.directory" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 9.776c.112-.017.227-.026.344-.026h15.812c.117 0 .232.009.344.026m-16.5 0a2.25 2.25 0 00-1.883 2.542l.857 6a2.25 2.25 0 002.227 1.932H19.05a2.25 2.25 0 002.227-1.932l.857-6a2.25 2.25 0 00-1.883-2.542m-16.5 0V6A2.25 2.25 0 016 3.75h3.879a1.5 1.5 0 011.06.44l2.122 2.12a1.5 1.5 0 001.06.44H18A2.25 2.25 0 0120.25 9v.776"/></svg>
+                                                {{-- Pencil (edit) icon for files --}}
+                                                <svg x-show="!e.directory" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"/></svg>
                                             </button>
                                             {{-- Three-dot menu --}}
                                             <div class="relative" x-data="{ menu: false }" @click.outside="menu = false">
