@@ -139,8 +139,10 @@
                                     <td class="px-2 py-2 text-gray-400 dark:text-gray-500 whitespace-nowrap hidden sm:table-cell" x-text="fmtDate(e.modified)"></td>
                                     <td class="px-4 py-2">
                                         <div class="flex items-center justify-end gap-0.5 text-gray-400">
-                                            {{-- Open / view --}}
-                                            <button @click="open(e)" title="{{ __('Open') }}" class="p-1.5 rounded hover:text-indigo-600 hover:bg-gray-100 dark:hover:bg-gray-700">
+                                            {{-- Open / view (disabled for binary files) --}}
+                                            <button @click="open(e)" :disabled="!e.directory && isBinary(e.name)"
+                                                    :title="!e.directory && isBinary(e.name) ? '{{ __('Binary file — cannot be edited') }}' : '{{ __('Open') }}'"
+                                                    class="p-1.5 rounded hover:text-indigo-600 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:pointer-events-none">
                                                 <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                                             </button>
                                             {{-- Three-dot menu --}}
@@ -150,7 +152,7 @@
                                                 </button>
                                                 <div x-show="menu" x-cloak @click="menu = false"
                                                      class="absolute right-0 z-10 mt-1 w-36 rounded-md bg-white dark:bg-gray-800 shadow-lg ring-1 ring-black/5 py-1 text-sm text-gray-700 dark:text-gray-200">
-                                                    <button @click="open(e)" class="block w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700" x-text="e.directory ? '{{ __('Open') }}' : '{{ __('Edit') }}'"></button>
+                                                    <button @click="open(e)" x-show="e.directory || !isBinary(e.name)" class="block w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700" x-text="e.directory ? '{{ __('Open') }}' : '{{ __('Edit') }}'"></button>
                                                     <button @click="deleteEntry(e)" class="block w-full text-left px-3 py-1.5 text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700">{{ __('Delete') }}</button>
                                                 </div>
                                             </div>
@@ -518,6 +520,15 @@
                     }
                     return '📄';
                 },
+                // Binary/non-text files that shouldn't be opened in the editor.
+                isBinary(name) {
+                    const ext = name.toLowerCase().includes('.') ? name.toLowerCase().split('.').pop() : '';
+                    const bin = ['jar', 'zip', 'tar', 'gz', 'tgz', 'bz2', 'xz', 'rar', '7z',
+                        'png', 'jpg', 'jpeg', 'gif', 'webp', 'ico', 'bmp', 'pdf',
+                        'exe', 'dll', 'so', 'o', 'class', 'bin', 'wasm', 'dat', 'db', 'sqlite', 'mca', 'mcr', 'nbt',
+                        'mp3', 'mp4', 'wav', 'ogg', 'flac', 'ttf', 'otf', 'woff', 'woff2'];
+                    return bin.includes(ext);
+                },
                 async load() {
                     this.search = '';
                     this.selected = [];
@@ -533,6 +544,7 @@
                 },
                 open(e) {
                     if (e.directory) { this.path = (this.path === '/' ? '' : this.path) + '/' + e.name; this.load(); }
+                    else if (this.isBinary(e.name)) { window.yunoToast('{{ __('This file type can\'t be edited.') }}', 'error'); }
                     else { this.read(e.name); }
                 },
                 async deleteEntry(e) {
