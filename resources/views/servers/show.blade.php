@@ -369,7 +369,12 @@
                 async load() {
                     try {
                         const r = await (await fetch(c.base + '?path=' + encodeURIComponent(this.path))).json();
-                        this.entries = r.entries || []; this.editing = null;
+                        // Folders first, then files, each sorted case-insensitively by name.
+                        this.entries = (r.entries || []).sort((a, b) =>
+                            a.directory !== b.directory
+                                ? (a.directory ? -1 : 1)
+                                : a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
+                        this.editing = null;
                     } catch (e) { this.entries = []; }
                 },
                 open(e) {
