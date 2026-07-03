@@ -13,6 +13,7 @@ use App\Http\Controllers\Admin\UpgradeController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\ClientApiKeyController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\NodeConfigController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ServerController;
 use App\Http\Controllers\TwoFactorChallengeController;
@@ -62,6 +63,7 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::post('upgrade', [UpgradeController::class, 'run'])->name('upgrade.run');
     Route::get('upgrade/log', [UpgradeController::class, 'log'])->name('upgrade.log');
     Route::post('nodes/{node}/refresh', [AdminNodeController::class, 'refresh'])->name('nodes.refresh');
+    Route::post('nodes/{node}/regenerate-token', [AdminNodeController::class, 'regenerateToken'])->name('nodes.regenerate-token');
     Route::post('nodes/{node}/allocations', [AllocationController::class, 'store'])->name('nodes.allocations.store');
     Route::delete('nodes/{node}/allocations/{allocation}', [AllocationController::class, 'destroy'])->name('nodes.allocations.destroy');
     Route::resource('nodes', AdminNodeController::class)->except('show');
@@ -80,6 +82,9 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::post('api/application', [ApiKeyController::class, 'storeApplication'])->name('api.application.store');
     Route::delete('api/keys/{apiKey}', [ApiKeyController::class, 'destroy'])->name('api.keys.destroy');
 });
+
+// Node daemon configuration, fetched by `wings configure` (token-authenticated).
+Route::get('/api/nodes/{node}/config', [NodeConfigController::class, 'show'])->name('nodes.config');
 
 // Two-factor login challenge (after password, before the session is authenticated).
 Route::get('/two-factor-challenge', [TwoFactorChallengeController::class, 'create'])

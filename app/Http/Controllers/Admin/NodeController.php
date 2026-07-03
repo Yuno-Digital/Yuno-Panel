@@ -28,10 +28,23 @@ class NodeController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        $node = Node::create($this->validated($request));
+        $node = Node::create($this->validated($request) + [
+            'daemon_token' => Node::generateToken(),
+        ]);
 
-        return redirect()->route('admin.nodes.index')
-            ->with($this->detect($node));
+        return redirect()->route('admin.nodes.edit', $node)
+            ->with('status', __('Node created. Configure the daemon using the Auto Deploy tab.'));
+    }
+
+    /**
+     * Generate a fresh daemon token (invalidates the old one).
+     */
+    public function regenerateToken(Node $node): RedirectResponse
+    {
+        $node->update(['daemon_token' => Node::generateToken()]);
+
+        return redirect()->route('admin.nodes.edit', $node)
+            ->with('status', __('New token generated — reconfigure the daemon.'));
     }
 
     public function edit(Node $node): View
@@ -92,7 +105,6 @@ class NodeController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'fqdn' => ['required', 'string', 'max:255'],
             'daemon_port' => ['required', 'integer', 'min:1', 'max:65535'],
-            'daemon_token' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
         ]);
     }

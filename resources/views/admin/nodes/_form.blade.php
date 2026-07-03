@@ -23,16 +23,6 @@
     </div>
 
     <div>
-        <x-input-label for="daemon_token" :value="__('Daemon token')" />
-        <x-text-input id="daemon_token" name="daemon_token" type="text" class="mt-1 block w-full font-mono text-sm"
-                      :value="old('daemon_token', $node->daemon_token)" required />
-        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-            {{ __('The token from the Wings config.json on this node.') }}
-        </p>
-        <x-input-error :messages="$errors->get('daemon_token')" class="mt-2" />
-    </div>
-
-    <div>
         <x-input-label for="description" :value="__('Description')" />
         <textarea id="description" name="description" rows="3"
                   class="mt-1 block w-full border-gray-300 dark:border-gray-600 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">{{ old('description', $node->description) }}</textarea>
