@@ -117,7 +117,7 @@
                         <thead>
                             <tr class="text-left text-xs uppercase tracking-wide text-gray-400 dark:text-gray-500 border-b border-gray-100 dark:border-gray-700">
                                 <th class="w-10 px-4 py-2"><input type="checkbox" @change="toggleAll()" :checked="allSelected"
-                                        class="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"></th>
+                                        class="rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-indigo-600 dark:checked:bg-indigo-500 focus:ring-indigo-500 dark:focus:ring-offset-gray-800"></th>
                                 <th class="px-2 py-2 font-medium">{{ __('Name') }}</th>
                                 <th class="px-2 py-2 font-medium text-right w-28">{{ __('Size') }}</th>
                                 <th class="px-2 py-2 font-medium w-44 hidden sm:table-cell">{{ __('Modified') }}</th>
@@ -128,10 +128,10 @@
                             <template x-for="e in filtered" :key="e.name">
                                 <tr class="border-b border-gray-50 dark:border-gray-700/50 hover:bg-gray-50 dark:hover:bg-gray-700/30">
                                     <td class="px-4 py-2"><input type="checkbox" :value="e.name" x-model="selected"
-                                            class="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"></td>
+                                            class="rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-indigo-600 dark:checked:bg-indigo-500 focus:ring-indigo-500 dark:focus:ring-offset-gray-800"></td>
                                     <td class="px-2 py-2 min-w-0">
                                         <button @click="open(e)" class="flex items-center gap-2 text-gray-800 dark:text-gray-200 hover:text-indigo-600 max-w-full">
-                                            <span class="shrink-0" x-text="e.directory ? '📁' : '📄'"></span>
+                                            <span class="shrink-0" x-text="fileIcon(e)"></span>
                                             <span class="truncate" x-text="e.name"></span>
                                         </button>
                                     </td>
@@ -497,6 +497,27 @@
                 },
                 fmtDate(ts) { return ts ? new Date(ts * 1000).toLocaleString() : ''; },
                 fullPath(name) { return (this.path === '/' ? '' : this.path) + '/' + name; },
+                // Pick an icon based on the file's extension.
+                fileIcon(e) {
+                    if (e.directory) return '📁';
+                    const name = e.name.toLowerCase();
+                    const ext = name.includes('.') ? name.split('.').pop() : '';
+                    const groups = {
+                        '🖼️': ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'ico', 'bmp'],
+                        '⚙️': ['json', 'yml', 'yaml', 'toml', 'ini', 'conf', 'cfg', 'properties', 'env', 'lock'],
+                        '📜': ['js', 'mjs', 'cjs', 'ts', 'py', 'php', 'go', 'rs', 'java', 'kt', 'c', 'h', 'cpp', 'cs', 'lua', 'rb', 'sh', 'bash'],
+                        '📦': ['zip', 'tar', 'gz', 'tgz', 'rar', '7z', 'jar'],
+                        '🌐': ['html', 'htm', 'xml'],
+                        '🎨': ['css', 'scss', 'sass'],
+                        '🗄️': ['db', 'sqlite', 'sql', 'mca', 'dat'],
+                        '📋': ['log'],
+                        '📝': ['md', 'txt'],
+                    };
+                    for (const icon in groups) {
+                        if (groups[icon].includes(ext)) return icon;
+                    }
+                    return '📄';
+                },
                 async load() {
                     this.search = '';
                     this.selected = [];
