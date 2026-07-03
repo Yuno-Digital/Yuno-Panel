@@ -50,7 +50,7 @@
 
             {{-- Tabs --}}
             <nav class="inline-flex items-center gap-1 rounded-xl bg-gray-100 dark:bg-gray-800/80 p-1.5 ring-1 ring-gray-200 dark:ring-gray-700">
-                @foreach (['console' => __('Console'), 'files' => __('Files'), 'settings' => __('Settings')] as $key => $label)
+                @foreach (['console' => __('Console'), 'files' => __('Files'), 'startup' => __('Startup'), 'settings' => __('Settings')] as $key => $label)
                     <button type="button" @click="tab = '{{ $key }}'"
                             :class="tab === '{{ $key }}' ? 'bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-300 shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'"
                             class="rounded-lg px-4 py-2 text-sm font-semibold">{{ $label }}</button>
@@ -104,17 +104,11 @@
                 </div>
             </div>
 
-            {{-- Settings --}}
-            <div x-show="tab === 'settings'" x-cloak class="space-y-6">
+            {{-- Startup --}}
+            <div x-show="tab === 'startup'" x-cloak class="space-y-6">
                 <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6">
-                    <dl class="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-4 text-sm">
-                        @foreach ([__('Egg') => $server->egg?->name ?? '—', __('Node') => $server->node?->name ?? '—', __('Address') => $server->allocation?->address() ?? '—', __('Memory') => \App\Support\Format::size($server->memory_mb), __('Disk') => \App\Support\Format::size($server->disk_mb), __('CPU') => $server->cpu ? $server->cpu.' %' : __('unlimited')] as $label => $value)
-                            <div>
-                                <dt class="text-gray-500 dark:text-gray-400">{{ $label }}</dt>
-                                <dd class="mt-0.5 font-medium text-gray-900 dark:text-gray-100">{{ $value }}</dd>
-                            </div>
-                        @endforeach
-                    </dl>
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100">{{ __('Startup command') }}</h3>
+                    <pre class="mt-3 overflow-auto rounded-lg bg-gray-900 text-gray-100 text-xs font-mono p-4 whitespace-pre-wrap">{{ $server->startup ?: __('—') }}</pre>
                 </div>
 
                 <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6">
@@ -130,12 +124,29 @@
                                     <x-text-input :id="'var_'.$variable->id" type="text" class="mt-1 block w-full font-mono text-sm"
                                                   :name="'variables['.$variable->env_variable.']'"
                                                   :value="old('variables.'.$variable->env_variable, $values[$variable->env_variable] ?? $variable->default_value)" />
+                                    @if ($variable->description)
+                                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ $variable->description }}</p>
+                                    @endif
                                     <x-input-error :messages="$errors->get('variables.'.$variable->env_variable)" class="mt-2" />
                                 </div>
                             @endforeach
                             <x-primary-button>{{ __('Save') }}</x-primary-button>
                         </form>
                     @endif
+                </div>
+            </div>
+
+            {{-- Settings --}}
+            <div x-show="tab === 'settings'" x-cloak class="space-y-6">
+                <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6">
+                    <dl class="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-4 text-sm">
+                        @foreach ([__('Egg') => $server->egg?->name ?? '—', __('Node') => $server->node?->name ?? '—', __('Address') => $server->allocation?->address() ?? '—', __('Memory') => \App\Support\Format::size($server->memory_mb), __('Disk') => \App\Support\Format::size($server->disk_mb), __('CPU') => $server->cpu ? $server->cpu.' %' : __('unlimited')] as $label => $value)
+                            <div>
+                                <dt class="text-gray-500 dark:text-gray-400">{{ $label }}</dt>
+                                <dd class="mt-0.5 font-medium text-gray-900 dark:text-gray-100">{{ $value }}</dd>
+                            </div>
+                        @endforeach
+                    </dl>
                 </div>
 
                 {{-- Reinstall --}}
