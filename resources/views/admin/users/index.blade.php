@@ -33,7 +33,7 @@
                                         <a href="{{ route('admin.users.edit', $user) }}" class="text-indigo-600 hover:underline">{{ __('Edit') }}</a>
                                         @unless ($user->is(auth()->user()))
                                             <form method="POST" action="{{ route('admin.users.destroy', $user) }}"
-                                                  onsubmit="return confirm('Delete this user?');">
+                                                  data-confirm="Delete this user?" data-confirm-button="Delete">
                                                 @csrf @method('DELETE')
                                                 <button class="text-red-600 hover:underline">{{ __('Delete') }}</button>
                                             </form>

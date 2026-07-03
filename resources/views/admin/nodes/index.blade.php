@@ -43,7 +43,7 @@
                                     </form>
                                     <a href="{{ route('admin.nodes.edit', $node) }}" class="text-indigo-600 hover:underline">{{ __('Edit') }}</a>
                                     <form method="POST" action="{{ route('admin.nodes.destroy', $node) }}"
-                                          onsubmit="return confirm('Delete this node?');">
+                                          data-confirm="Delete this node?" data-confirm-button="Delete">
                                         @csrf @method('DELETE')
                                         <button class="text-red-600 hover:underline">{{ __('Delete') }}</button>
                                     </form>

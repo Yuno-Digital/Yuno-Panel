@@ -48,7 +48,7 @@
                             <td class="px-6 py-4">
                                 <div class="flex justify-end">
                                     <form method="POST" action="{{ route('admin.api.keys.destroy', $key) }}"
-                                          onsubmit="return confirm('Revoke this key?');">
+                                          data-confirm="Revoke this key?" data-confirm-button="Revoke">
                                         @csrf @method('DELETE')
                                         <button class="text-red-600 hover:underline">{{ __('Revoke') }}</button>
                                     </form>

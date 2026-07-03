@@ -48,7 +48,7 @@
                                         <div class="flex justify-end gap-2">
                                             <a href="{{ route('admin.servers.edit', $server) }}" class="text-indigo-600 hover:underline">{{ __('Edit') }}</a>
                                             <form method="POST" action="{{ route('admin.servers.destroy', $server) }}"
-                                                  onsubmit="return confirm('Delete this server?');">
+                                                  data-confirm="Delete this server?" data-confirm-button="Delete">
                                                 @csrf @method('DELETE')
                                                 <button class="text-red-600 hover:underline">{{ __('Delete') }}</button>
                                             </form>

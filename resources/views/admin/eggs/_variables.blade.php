@@ -12,7 +12,7 @@
                 <x-primary-button>{{ __('Save variable') }}</x-primary-button>
             </form>
             <form method="POST" action="{{ route('admin.eggs.variables.destroy', [$egg, $variable]) }}"
-                  class="mt-2" onsubmit="return confirm('Delete this variable?')">
+                  class="mt-2" data-confirm="Delete this variable?" data-confirm-button="Delete">
                 @csrf @method('DELETE')
                 <button class="text-sm text-red-600 hover:underline">{{ __('Delete variable') }}</button>
             </form>

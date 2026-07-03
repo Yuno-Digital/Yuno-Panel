@@ -39,12 +39,16 @@
                     · RAM <span class="font-medium text-gray-800 dark:text-gray-200" x-text="Math.round(stats.memory_mb ?? 0) + ' / ' + Math.round(stats.memory_limit_mb ?? {{ $server->memory_mb }}) + ' MB'"></span>
                 </div>
                 <div class="ms-auto flex items-center gap-2">
-                    <button @click="power('start')" class="px-3 py-1.5 rounded-md text-sm font-medium bg-green-600 text-white hover:bg-green-700">{{ __('Start') }}</button>
-                    <button @click="power('restart')" class="px-3 py-1.5 rounded-md text-sm font-medium bg-amber-500 text-white hover:bg-amber-600">{{ __('Restart') }}</button>
-                    <button @click="power('stop')" class="px-3 py-1.5 rounded-md text-sm font-medium bg-red-600 text-white hover:bg-red-700">{{ __('Stop') }}</button>
-                    <form method="POST" action="{{ route('servers.install', $server) }}" onsubmit="return confirm('(Re)install the container? Files are kept.')">
+                    <button @click="power('start')" :disabled="!canStart"
+                            class="px-3 py-1.5 rounded-md text-sm font-medium bg-green-600 text-white hover:bg-green-700 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-green-600">{{ __('Start') }}</button>
+                    <button @click="power('restart')" :disabled="!canRestart"
+                            class="px-3 py-1.5 rounded-md text-sm font-medium bg-amber-500 text-white hover:bg-amber-600 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-amber-500">{{ __('Restart') }}</button>
+                    <button @click="power('stop')" :disabled="!canStop"
+                            class="px-3 py-1.5 rounded-md text-sm font-medium bg-red-600 text-white hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-red-600">{{ __('Stop') }}</button>
+                    <form method="POST" action="{{ route('servers.install', $server) }}"
+                          data-confirm="(Re)install the container? Files are kept." data-confirm-button="Install" data-confirm-icon="question">
                         @csrf
-                        <x-secondary-button type="submit">{{ __('Install') }}</x-secondary-button>
+                        <x-secondary-button type="submit" x-bind:disabled="stats.state === 'unreachable'">{{ __('Install') }}</x-secondary-button>
                     </form>
                 </div>
             </div>
@@ -160,6 +164,11 @@
                     if (this.stats.state === 'restarting' || this.stats.state === 'loading') return 'bg-amber-400';
                     return 'bg-gray-400';
                 },
+                // A server can only be started when it's installed but stopped,
+                // and only stopped/restarted while it's running.
+                get canStart() { return ['exited', 'created'].includes(this.stats.state); },
+                get canStop() { return this.stats.state === 'running'; },
+                get canRestart() { return this.stats.state === 'running'; },
                 strip(s) { return (s || '').replace(/\x1b\[[0-9;]*m/g, ''); },
 
                 init() {
@@ -235,7 +244,28 @@
                 },
 
                 async power(action) {
-                    await fetch(c.powerUrl, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': c.csrf }, body: JSON.stringify({ action }) });
+                    // Ignore clicks on a button that isn't valid for the current state.
+                    if ((action === 'start' && !this.canStart) ||
+                        (action === 'stop' && !this.canStop) ||
+                        (action === 'restart' && !this.canRestart)) return;
+
+                    // Confirm the disruptive actions before sending them.
+                    if (action === 'stop' || action === 'restart') {
+                        const r = await window.yunoConfirm({
+                            title: action === 'stop' ? 'Stop the server?' : 'Restart the server?',
+                            text: action === 'stop' ? 'Players will be disconnected.' : 'The server will briefly go offline.',
+                            confirmButtonText: action === 'stop' ? 'Stop' : 'Restart',
+                        });
+                        if (!r.isConfirmed) return;
+                    }
+
+                    try {
+                        const res = await fetch(c.powerUrl, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': c.csrf }, body: JSON.stringify({ action }) });
+                        if (res.ok) window.yunoToast('Power action sent: ' + action);
+                        else window.yunoToast('Could not reach the node daemon.', 'error');
+                    } catch (e) {
+                        window.yunoToast('Could not reach the node daemon.', 'error');
+                    }
                 },
 
                 sendCommand() {
