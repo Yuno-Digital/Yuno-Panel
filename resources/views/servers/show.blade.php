@@ -115,20 +115,23 @@
                     </ul>
                 </div>
 
-                {{-- File editor modal --}}
+                {{-- File editor modal (Monaco — the VS Code editor — with a textarea fallback) --}}
                 <div x-show="editing" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4"
-                     @keydown.escape.window="editing = null">
-                    <div class="absolute inset-0 bg-black/50" @click="editing = null"></div>
-                    <div class="relative w-full max-w-4xl max-h-[85vh] flex flex-col rounded-lg bg-white dark:bg-gray-800 shadow-xl">
+                     @keydown.escape.window="closeEditor()">
+                    <div class="absolute inset-0 bg-black/50" @click="closeEditor()"></div>
+                    <div class="relative w-full max-w-5xl h-[85vh] flex flex-col rounded-lg bg-white dark:bg-gray-800 shadow-xl overflow-hidden">
                         <div class="flex items-center justify-between gap-4 border-b border-gray-200 dark:border-gray-700 px-4 py-3">
                             <span class="font-mono text-sm text-gray-700 dark:text-gray-300 truncate" x-text="editing"></span>
                             <div class="flex items-center gap-2 shrink-0">
                                 <button @click="save()" class="px-3 py-1.5 rounded-md text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-700">{{ __('Save') }}</button>
-                                <button @click="editing = null" class="px-3 py-1.5 rounded-md text-sm font-medium bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600">{{ __('Close') }}</button>
+                                <button @click="closeEditor()" class="px-3 py-1.5 rounded-md text-sm font-medium bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600">{{ __('Close') }}</button>
                             </div>
                         </div>
-                        <textarea x-model="contents" spellcheck="false"
-                                  class="flex-1 w-full font-mono text-xs border-0 rounded-b-lg bg-gray-900 text-gray-100 p-4 resize-none focus:ring-0"></textarea>
+                        <div class="flex-1 min-h-0 relative">
+                            <div x-ref="editor" x-show="monacoReady" class="absolute inset-0"></div>
+                            <textarea x-show="!monacoReady" x-model="contents" spellcheck="false"
+                                      class="absolute inset-0 w-full h-full font-mono text-xs border-0 bg-gray-900 text-gray-100 p-4 resize-none focus:ring-0"></textarea>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -240,6 +243,42 @@
     </div>
 
     <script>
+        // Lazily load the Monaco editor (the engine behind VS Code) from a CDN,
+        // reusing a single load across the page. Resolves with window.monaco.
+        function loadMonaco() {
+            if (window.monaco) return Promise.resolve(window.monaco);
+            if (window.__monacoLoading) return window.__monacoLoading;
+
+            const base = 'https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs';
+            window.__monacoLoading = new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = base + '/loader.js';
+                script.onload = () => {
+                    window.require.config({ paths: { vs: base } });
+                    window.require(['vs/editor/editor.main'], () => resolve(window.monaco));
+                };
+                script.onerror = () => reject(new Error('failed to load Monaco'));
+                document.head.appendChild(script);
+            });
+            return window.__monacoLoading;
+        }
+
+        // Guess a Monaco language id from a file path.
+        function monacoLanguage(path) {
+            const name = (path.split('/').pop() || '').toLowerCase();
+            if (name === 'dockerfile') return 'dockerfile';
+            const ext = name.includes('.') ? name.split('.').pop() : '';
+            const map = {
+                json: 'json', js: 'javascript', mjs: 'javascript', cjs: 'javascript', ts: 'typescript',
+                yml: 'yaml', yaml: 'yaml', toml: 'ini', ini: 'ini', conf: 'ini', cfg: 'ini', env: 'ini', properties: 'ini',
+                php: 'php', py: 'python', rb: 'ruby', go: 'go', rs: 'rust', java: 'java', kt: 'kotlin',
+                c: 'c', h: 'c', cpp: 'cpp', cs: 'csharp', sh: 'shell', bash: 'shell',
+                xml: 'xml', html: 'html', htm: 'html', css: 'css', scss: 'scss', md: 'markdown',
+                sql: 'sql', lua: 'lua',
+            };
+            return map[ext] || 'plaintext';
+        }
+
         function serverConsole(c) {
             // Kept outside the reactive object: Alpine's proxy would rebind the
             // WebSocket's methods and break send().
@@ -376,8 +415,11 @@
         }
 
         function fileManager(c) {
+            // Monaco editor instance kept out of Alpine's reactive proxy.
+            let editor = null;
+
             return {
-                path: '/', entries: [], editing: null, contents: '', search: '',
+                path: '/', entries: [], editing: null, contents: '', search: '', monacoReady: false,
                 // Entries matching the search box (folders already sorted first).
                 get filtered() {
                     const q = this.search.trim().toLowerCase();
@@ -392,7 +434,7 @@
                             a.directory !== b.directory
                                 ? (a.directory ? -1 : 1)
                                 : a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
-                        this.editing = null;
+                        this.closeEditor();
                     } catch (e) { this.entries = []; }
                 },
                 open(e) {
@@ -403,11 +445,43 @@
                     const p = (this.path === '/' ? '' : this.path) + '/' + name;
                     const r = await (await fetch(c.readUrl + '?path=' + encodeURIComponent(p))).json();
                     this.editing = p; this.contents = r.contents ?? '';
+                    this.mountEditor();
+                },
+                // Mount Monaco into the modal; fall back to the plain textarea if
+                // it can't be loaded (e.g. offline).
+                async mountEditor() {
+                    let monaco;
+                    try {
+                        monaco = await loadMonaco();
+                    } catch (e) {
+                        this.monacoReady = false; // textarea fallback stays visible
+                        return;
+                    }
+                    // Reveal the container first so Monaco lays out at full size.
+                    this.monacoReady = true;
+                    await this.$nextTick();
+                    if (editor) { editor.dispose(); editor = null; }
+                    editor = monaco.editor.create(this.$refs.editor, {
+                        value: this.contents,
+                        language: monacoLanguage(this.editing),
+                        theme: document.documentElement.classList.contains('dark') ? 'vs-dark' : 'vs',
+                        automaticLayout: true,
+                        fontSize: 13,
+                        minimap: { enabled: true },
+                        scrollBeyondLastLine: false,
+                        tabSize: 2,
+                    });
+                },
+                closeEditor() {
+                    if (editor) { editor.dispose(); editor = null; }
+                    this.monacoReady = false;
+                    this.editing = null;
                 },
                 up() { this.path = this.path.replace(/\/[^/]*$/, '') || '/'; this.load(); },
                 async save() {
+                    const contents = (editor && this.monacoReady) ? editor.getValue() : this.contents;
                     try {
-                        const res = await fetch(c.writeUrl, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': c.csrf }, body: JSON.stringify({ path: this.editing, contents: this.contents }) });
+                        const res = await fetch(c.writeUrl, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': c.csrf }, body: JSON.stringify({ path: this.editing, contents }) });
                         if (res.ok) window.yunoToast('{{ __('File saved') }}');
                         else window.yunoToast('{{ __('Could not save file.') }}', 'error');
                     } catch (e) {
