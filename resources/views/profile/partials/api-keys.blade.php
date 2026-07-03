@@ -40,7 +40,7 @@
                             </p>
                         </div>
                         <form method="POST" action="{{ route('profile.api-keys.destroy', $key) }}"
-                              onsubmit="return confirm('Revoke this key?');">
+                              data-confirm="Revoke this key?" data-confirm-button="Revoke">
                             @csrf @method('DELETE')
                             <button class="text-sm text-red-600 hover:underline">{{ __('Revoke') }}</button>
                         </form>

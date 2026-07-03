@@ -50,7 +50,7 @@
                                 <div class="flex justify-end gap-2">
                                     <a href="{{ route('admin.eggs.edit', $egg) }}" class="text-indigo-600 hover:underline">{{ __('Edit') }}</a>
                                     <form method="POST" action="{{ route('admin.eggs.destroy', $egg) }}"
-                                          onsubmit="return confirm('Delete this egg?');">
+                                          data-confirm="Delete this egg?" data-confirm-button="Delete">
                                         @csrf @method('DELETE')
                                         <button class="text-red-600 hover:underline">{{ __('Delete') }}</button>
                                     </form>

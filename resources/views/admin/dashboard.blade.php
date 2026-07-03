@@ -37,9 +37,8 @@
                         <a href="{{ $update['url'] }}" target="_blank" rel="noopener"
                            class="text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:underline">{{ __('View release') }} &rarr;</a>
                     @endif
-                    <form method="POST" action="{{ route('admin.upgrade.run') }}"
-                          @submit="running = true; setTimeout(() => poll(), 1500)"
-                          onsubmit="return confirm('Update the panel now? It will pull the latest code, run migrations and rebuild.');">
+                    <form method="POST" action="{{ route('admin.upgrade.run') }}" x-ref="upgradeForm"
+                          @submit.prevent="window.yunoConfirm({ text: 'Update the panel now? It will pull the latest code, run migrations and rebuild.', confirmButtonText: 'Update', icon: 'question' }).then(r => { if (r.isConfirmed) { running = true; setTimeout(() => poll(), 1500); $refs.upgradeForm.submit(); } })">
                         @csrf
                         <x-primary-button>{{ __('Update now') }}</x-primary-button>
                     </form>

@@ -34,9 +34,10 @@
             </div>
         </div>
 
-        <form method="POST" action="{{ route('profile.2fa.destroy') }}" class="mt-4">
+        <form method="POST" action="{{ route('profile.2fa.destroy') }}" class="mt-4"
+              data-confirm="Disable two-factor authentication?" data-confirm-button="Disable" data-confirm-icon="warning">
             @csrf @method('DELETE')
-            <x-danger-button onclick="return confirm('Disable two-factor authentication?')">
+            <x-danger-button>
                 {{ __('Disable') }}
             </x-danger-button>
         </form>
