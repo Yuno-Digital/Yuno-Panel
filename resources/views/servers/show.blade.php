@@ -93,12 +93,15 @@
                  x-data="fileManager({ base: '{{ route('servers.files', $server) }}', readUrl: '{{ route('servers.files.read', $server) }}', writeUrl: '{{ route('servers.files.write', $server) }}', csrf: '{{ csrf_token() }}' })"
                  x-init="load()">
                 <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-4">
-                    <div class="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-3">
-                        <button @click="up()" x-show="path !== '/'" class="hover:underline">⬑ {{ __('up') }}</button>
-                        <span class="font-mono" x-text="path"></span>
+                    <div class="flex items-center gap-3 text-sm text-gray-500 dark:text-gray-400 mb-3">
+                        <button @click="up()" x-show="path !== '/'" class="hover:underline shrink-0">⬑ {{ __('up') }}</button>
+                        <span class="font-mono truncate" x-text="path"></span>
+                        <input x-model="search" type="search" autocomplete="off"
+                               placeholder="{{ __('Search files…') }}"
+                               class="ms-auto w-48 max-w-[45%] text-sm rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:border-indigo-500 focus:ring-indigo-500">
                     </div>
                     <ul class="divide-y divide-gray-100 dark:divide-gray-700">
-                        <template x-for="e in entries" :key="e.name">
+                        <template x-for="e in filtered" :key="e.name">
                             <li class="py-2 flex items-center justify-between text-sm">
                                 <button @click="open(e)" class="flex items-center gap-2 text-gray-800 dark:text-gray-200 hover:text-indigo-600">
                                     <span x-text="e.directory ? '📁' : '📄'"></span>
@@ -107,16 +110,25 @@
                                 <span class="text-xs text-gray-400" x-show="!e.directory" x-text="e.size + ' B'"></span>
                             </li>
                         </template>
-                        <li x-show="entries.length === 0" class="py-3 text-sm text-gray-500 dark:text-gray-400">{{ __('Empty or unreachable.') }}</li>
+                        <li x-show="filtered.length === 0" class="py-3 text-sm text-gray-500 dark:text-gray-400"
+                            x-text="search ? '{{ __('No files match your search.') }}' : '{{ __('Empty or unreachable.') }}'"></li>
                     </ul>
+                </div>
 
-                    <div x-show="editing" x-cloak class="mt-4 border-t border-gray-200 dark:border-gray-700 pt-4">
-                        <div class="flex items-center justify-between mb-2">
-                            <span class="font-mono text-sm text-gray-700 dark:text-gray-300" x-text="editing"></span>
-                            <button @click="save()" class="px-3 py-1.5 rounded-md text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-700">{{ __('Save') }}</button>
+                {{-- File editor modal --}}
+                <div x-show="editing" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4"
+                     @keydown.escape.window="editing = null">
+                    <div class="absolute inset-0 bg-black/50" @click="editing = null"></div>
+                    <div class="relative w-full max-w-4xl max-h-[85vh] flex flex-col rounded-lg bg-white dark:bg-gray-800 shadow-xl">
+                        <div class="flex items-center justify-between gap-4 border-b border-gray-200 dark:border-gray-700 px-4 py-3">
+                            <span class="font-mono text-sm text-gray-700 dark:text-gray-300 truncate" x-text="editing"></span>
+                            <div class="flex items-center gap-2 shrink-0">
+                                <button @click="save()" class="px-3 py-1.5 rounded-md text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-700">{{ __('Save') }}</button>
+                                <button @click="editing = null" class="px-3 py-1.5 rounded-md text-sm font-medium bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600">{{ __('Close') }}</button>
+                            </div>
                         </div>
-                        <textarea x-model="contents" rows="14" spellcheck="false"
-                                  class="block w-full font-mono text-xs rounded-md border-gray-300 dark:border-gray-600 bg-gray-900 text-gray-100"></textarea>
+                        <textarea x-model="contents" spellcheck="false"
+                                  class="flex-1 w-full font-mono text-xs border-0 rounded-b-lg bg-gray-900 text-gray-100 p-4 resize-none focus:ring-0"></textarea>
                     </div>
                 </div>
             </div>
@@ -365,8 +377,14 @@
 
         function fileManager(c) {
             return {
-                path: '/', entries: [], editing: null, contents: '',
+                path: '/', entries: [], editing: null, contents: '', search: '',
+                // Entries matching the search box (folders already sorted first).
+                get filtered() {
+                    const q = this.search.trim().toLowerCase();
+                    return q ? this.entries.filter((e) => e.name.toLowerCase().includes(q)) : this.entries;
+                },
                 async load() {
+                    this.search = '';
                     try {
                         const r = await (await fetch(c.base + '?path=' + encodeURIComponent(this.path))).json();
                         // Folders first, then files, each sorted case-insensitively by name.
@@ -388,7 +406,13 @@
                 },
                 up() { this.path = this.path.replace(/\/[^/]*$/, '') || '/'; this.load(); },
                 async save() {
-                    await fetch(c.writeUrl, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': c.csrf }, body: JSON.stringify({ path: this.editing, contents: this.contents }) });
+                    try {
+                        const res = await fetch(c.writeUrl, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': c.csrf }, body: JSON.stringify({ path: this.editing, contents: this.contents }) });
+                        if (res.ok) window.yunoToast('{{ __('File saved') }}');
+                        else window.yunoToast('{{ __('Could not save file.') }}', 'error');
+                    } catch (e) {
+                        window.yunoToast('{{ __('Could not save file.') }}', 'error');
+                    }
                 },
             };
         }
