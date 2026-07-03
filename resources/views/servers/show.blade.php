@@ -13,7 +13,6 @@
 
     <div class="py-10" x-data="serverConsole({
             wsInfoUrl: '{{ route('servers.ws', $server) }}',
-            installLogUrl: '{{ route('servers.install-log', $server) }}',
             powerUrl: '{{ route('servers.power', $server) }}',
             csrf: '{{ csrf_token() }}',
             tab: 'console'
@@ -52,7 +51,7 @@
 
             {{-- Tabs --}}
             <nav class="inline-flex items-center gap-1 rounded-xl bg-gray-100 dark:bg-gray-800/80 p-1.5 ring-1 ring-gray-200 dark:ring-gray-700">
-                @foreach (['console' => __('Console'), 'install' => __('Install'), 'files' => __('Files'), 'settings' => __('Settings')] as $key => $label)
+                @foreach (['console' => __('Console'), 'files' => __('Files'), 'settings' => __('Settings')] as $key => $label)
                     <button type="button" @click="tab = '{{ $key }}'"
                             :class="tab === '{{ $key }}' ? 'bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-300 shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'"
                             class="rounded-lg px-4 py-2 text-sm font-semibold">{{ $label }}</button>
@@ -71,12 +70,6 @@
                     <button type="submit" :disabled="stats.state !== 'running'"
                             class="px-4 py-2 rounded-md bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 disabled:opacity-50">{{ __('Send') }}</button>
                 </form>
-            </div>
-
-            {{-- Install log --}}
-            <div x-show="tab === 'install'" x-cloak>
-                <p class="mb-2 text-sm text-gray-500 dark:text-gray-400">{{ __('Live output of the installation (image download + egg install script).') }}</p>
-                <pre x-ref="install" class="h-96 overflow-auto rounded-lg bg-gray-900 text-gray-100 text-xs font-mono p-4 whitespace-pre-wrap" x-text="installLog || '{{ __('No installation has run yet. Click Install.') }}'"></pre>
             </div>
 
             {{-- Files --}}
@@ -158,7 +151,7 @@
             let socket = null, reconnectTimer = null, closed = false, started = false;
 
             return {
-                tab: c.tab, stats: { state: 'loading' }, logs: '', installLog: '', commandInput: '',
+                tab: c.tab, stats: { state: 'loading' }, logs: '', commandInput: '',
                 labels: { running: 'Running', exited: 'Offline', created: 'Installed (stopped)', restarting: 'Restarting', missing: 'Not installed', loading: 'Loading…', unreachable: 'Node unreachable' },
                 get stateLabel() { return this.labels[this.stats.state] || (this.stats.state || 'Unknown'); },
                 get stateColor() {
@@ -177,9 +170,6 @@
                     started = true;
 
                     this.connect();
-                    // The install log is still a plain file, polled while installing.
-                    this.pollInstall();
-                    setInterval(() => this.pollInstall(), 3000);
                     window.addEventListener('beforeunload', () => { closed = true; if (socket) socket.close(); });
                 },
 
@@ -242,14 +232,6 @@
                     this.$nextTick(() => {
                         if (this.$refs.console) this.$refs.console.scrollTop = this.$refs.console.scrollHeight;
                     });
-                },
-
-                async pollInstall() {
-                    try {
-                        const il = await (await fetch(c.installLogUrl)).json();
-                        this.installLog = this.strip(il.log);
-                        this.$nextTick(() => { if (this.$refs.install) this.$refs.install.scrollTop = this.$refs.install.scrollHeight; });
-                    } catch (e) {}
                 },
 
                 async power(action) {

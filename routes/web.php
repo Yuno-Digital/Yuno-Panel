@@ -38,7 +38,6 @@ Route::middleware('auth')->group(function () {
     Route::get('/servers/{server}/ws', [ServerController::class, 'websocket'])->name('servers.ws');
     Route::get('/servers/{server}/stats', [ServerController::class, 'stats'])->name('servers.stats');
     Route::get('/servers/{server}/logs', [ServerController::class, 'logs'])->name('servers.logs');
-    Route::get('/servers/{server}/install-log', [ServerController::class, 'installLog'])->name('servers.install-log');
     Route::get('/servers/{server}/files', [ServerController::class, 'files'])->name('servers.files');
     Route::get('/servers/{server}/files/contents', [ServerController::class, 'fileRead'])->name('servers.files.read');
     Route::post('/servers/{server}/files/write', [ServerController::class, 'fileWrite'])->name('servers.files.write');

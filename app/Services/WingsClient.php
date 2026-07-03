@@ -112,14 +112,6 @@ class WingsClient
     }
 
     /**
-     * The streamed install log for a server.
-     */
-    public function installLog(Server $server): string
-    {
-        return (string) ($this->get($server, '/install-log')['log'] ?? '');
-    }
-
-    /**
      * Build the console WebSocket connection details for a server: the ws(s)
      * URL of its node daemon plus a short-lived token the browser presents to
      * authenticate. The token is a JWT signed with the node's shared daemon
