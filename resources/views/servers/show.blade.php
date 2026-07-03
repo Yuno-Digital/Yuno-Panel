@@ -155,7 +155,7 @@
         function serverConsole(c) {
             // Kept outside the reactive object: Alpine's proxy would rebind the
             // WebSocket's methods and break send().
-            let socket = null, reconnectTimer = null, closed = false;
+            let socket = null, reconnectTimer = null, closed = false, started = false;
 
             return {
                 tab: c.tab, stats: { state: 'loading' }, logs: '', installLog: '', commandInput: '',
@@ -170,6 +170,12 @@
                 strip(s) { return (s || '').replace(/\x1b\[[0-9;]*m/g, ''); },
 
                 init() {
+                    // Alpine auto-calls init() AND we also declare x-init="init()";
+                    // guard so the console connects exactly once (a double connect
+                    // would stream every log line twice).
+                    if (started) return;
+                    started = true;
+
                     this.connect();
                     // The install log is still a plain file, polled while installing.
                     this.pollInstall();
@@ -179,6 +185,9 @@
 
                 // Open (or reopen) the console WebSocket to the node daemon.
                 async connect() {
+                    // Drop any previous socket so reconnects don't stack followers.
+                    if (socket) { try { socket.onclose = null; socket.onmessage = null; socket.close(); } catch (e) {} socket = null; }
+
                     let info;
                     try {
                         info = await (await fetch(c.wsInfoUrl)).json();
