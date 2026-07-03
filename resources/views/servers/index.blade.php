@@ -50,40 +50,4 @@
             </div>
         </div>
     </div>
-
-    <script>
-        // Live server status: polls the node daemon and shows the real container
-        // state instead of the stored DB column.
-        function serverStatus(url) {
-            return {
-                state: 'loading',
-                labels: { running: 'Running', exited: 'Offline', created: 'Installed (stopped)', restarting: 'Restarting', missing: 'Not installed', loading: 'Loading…', unreachable: 'Node unreachable' },
-                get label() {
-                    return this.labels[this.state] || (this.state ? this.state.charAt(0).toUpperCase() + this.state.slice(1) : 'Unknown');
-                },
-                get dot() {
-                    if (this.state === 'running') return 'bg-green-500';
-                    if (this.state === 'unreachable') return 'bg-red-500';
-                    if (this.state === 'restarting' || this.state === 'loading') return 'bg-amber-400';
-                    return 'bg-gray-400';
-                },
-                get badge() {
-                    if (this.state === 'running') return 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300';
-                    if (this.state === 'unreachable') return 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300';
-                    if (this.state === 'restarting') return 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300';
-                    return 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300';
-                },
-                start() {
-                    this.load();
-                    setInterval(() => this.load(), 8000);
-                },
-                async load() {
-                    try {
-                        const r = await (await fetch(url)).json();
-                        this.state = r.state || 'unreachable';
-                    } catch (e) { this.state = 'unreachable'; }
-                },
-            };
-        }
-    </script>
 </x-app-layout>
