@@ -41,6 +41,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/servers/{server}/files/list', [ServerController::class, 'files'])->name('servers.files');
     Route::get('/servers/{server}/files/contents', [ServerController::class, 'fileRead'])->name('servers.files.read');
     Route::post('/servers/{server}/files/write', [ServerController::class, 'fileWrite'])->name('servers.files.write');
+    Route::post('/servers/{server}/files/delete', [ServerController::class, 'fileDelete'])->name('servers.files.delete');
     // Deep-linkable UI tab, e.g. /servers/5/startup — resolves to the show page.
     Route::get('/servers/{server}/{tab}', [ServerController::class, 'show'])
         ->whereIn('tab', ['console', 'files', 'startup', 'settings'])->name('servers.show.tab');
