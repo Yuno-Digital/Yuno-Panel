@@ -13,7 +13,7 @@ Nodes (Host-Maschinen), mit User-Login und Dashboard.
 - PHP 8.5 / Laravel 13
 - Laravel Breeze (Blade) für Auth-Scaffolding
 - Tailwind CSS + Vite
-- SQLite (Entwicklung) – MySQL/MariaDB für Produktion vorgesehen
+- SQLite (Entwicklung) – MySQL/MariaDB für Produktion vorgesehen.
 
 ## Datenmodell
 
