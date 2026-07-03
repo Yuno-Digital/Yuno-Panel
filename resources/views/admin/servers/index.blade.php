@@ -27,16 +27,10 @@
                             @foreach ($servers as $server)
                                 <tr>
                                     <td class="px-6 py-4 font-medium text-gray-900 dark:text-gray-100">{{ $server->name }}</td>
-                                    <td class="px-6 py-4">
-                                        @php
-                                            $color = match ($server->status) {
-                                                'running' => 'bg-green-100 text-green-800',
-                                                'starting', 'stopping' => 'bg-yellow-100 text-yellow-800',
-                                                default => 'bg-gray-100 text-gray-700 dark:text-gray-300',
-                                            };
-                                        @endphp
-                                        <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold {{ $color }}">
-                                            {{ ucfirst($server->status) }}
+                                    <td class="px-6 py-4" x-data="serverStatus('{{ route('servers.stats', $server) }}')" x-init="start()">
+                                        <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-semibold" :class="badge">
+                                            <span class="w-1.5 h-1.5 rounded-full" :class="dot"></span>
+                                            <span x-text="label"></span>
                                         </span>
                                     </td>
                                     <td class="px-6 py-4">{{ $server->egg?->name ?? '—' }}</td>
