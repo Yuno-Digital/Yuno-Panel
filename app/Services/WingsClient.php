@@ -120,6 +120,53 @@ class WingsClient
     }
 
     /**
+     * Build the console WebSocket connection details for a server: the ws(s)
+     * URL of its node daemon plus a short-lived token the browser presents to
+     * authenticate. The token is a JWT signed with the node's shared daemon
+     * secret, which the daemon verifies without a round-trip to the panel.
+     *
+     * @return array{socket: string, token: string}
+     */
+    public function websocket(Server $server): array
+    {
+        $node = $server->node;
+
+        $token = $this->signToken((string) $node?->daemon_token, [
+            'server' => $server->uuid,
+            'iat' => time(),
+            'exp' => time() + 600,
+        ]);
+
+        // http -> ws and https -> wss.
+        $socket = preg_replace('/^http/', 'ws', (string) $node?->daemonUrl())
+            .'/api/servers/'.$server->uuid.'/ws';
+
+        return ['socket' => $socket, 'token' => $token];
+    }
+
+    /**
+     * Sign a compact HS256 JWT with the given secret.
+     *
+     * @param  array<string, mixed>  $claims
+     */
+    private function signToken(string $secret, array $claims): string
+    {
+        $header = $this->base64Url((string) json_encode(['typ' => 'JWT', 'alg' => 'HS256']));
+        $payload = $this->base64Url((string) json_encode($claims));
+        $signature = $this->base64Url(hash_hmac('sha256', $header.'.'.$payload, $secret, true));
+
+        return $header.'.'.$payload.'.'.$signature;
+    }
+
+    /**
+     * URL-safe base64 without padding, as used by JWT.
+     */
+    private function base64Url(string $data): string
+    {
+        return rtrim(strtr(base64_encode($data), '+/', '-_'), '=');
+    }
+
+    /**
      * Send a power action (start|stop|restart).
      */
     public function power(Server $server, string $action): bool

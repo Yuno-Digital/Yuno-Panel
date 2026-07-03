@@ -12,11 +12,9 @@
     @endphp
 
     <div class="py-10" x-data="serverConsole({
-            statsUrl: '{{ route('servers.stats', $server) }}',
-            logsUrl: '{{ route('servers.logs', $server) }}',
+            wsInfoUrl: '{{ route('servers.ws', $server) }}',
             installLogUrl: '{{ route('servers.install-log', $server) }}',
             powerUrl: '{{ route('servers.power', $server) }}',
-            commandUrl: '{{ route('servers.command', $server) }}',
             csrf: '{{ csrf_token() }}',
             tab: 'console'
          })" x-init="init()">
@@ -155,6 +153,10 @@
 
     <script>
         function serverConsole(c) {
+            // Kept outside the reactive object: Alpine's proxy would rebind the
+            // WebSocket's methods and break send().
+            let socket = null, reconnectTimer = null, closed = false;
+
             return {
                 tab: c.tab, stats: { state: 'loading' }, logs: '', installLog: '', commandInput: '',
                 labels: { running: 'Running', exited: 'Offline', created: 'Installed (stopped)', restarting: 'Restarting', missing: 'Not installed', loading: 'Loading…', unreachable: 'Node unreachable' },
@@ -166,30 +168,91 @@
                     return 'bg-gray-400';
                 },
                 strip(s) { return (s || '').replace(/\x1b\[[0-9;]*m/g, ''); },
-                init() { this.poll(); setInterval(() => this.poll(), 3000); },
-                async poll() {
+
+                init() {
+                    this.connect();
+                    // The install log is still a plain file, polled while installing.
+                    this.pollInstall();
+                    setInterval(() => this.pollInstall(), 3000);
+                    window.addEventListener('beforeunload', () => { closed = true; if (socket) socket.close(); });
+                },
+
+                // Open (or reopen) the console WebSocket to the node daemon.
+                async connect() {
+                    let info;
                     try {
-                        this.stats = await (await fetch(c.statsUrl)).json();
-                        const l = await (await fetch(c.logsUrl)).json();
-                        this.logs = l.logs || '';
+                        info = await (await fetch(c.wsInfoUrl)).json();
+                    } catch (e) {
+                        this.stats = { state: 'unreachable' };
+                        return this.scheduleReconnect();
+                    }
+
+                    let ws;
+                    try {
+                        ws = new WebSocket(info.socket);
+                    } catch (e) {
+                        this.stats = { state: 'unreachable' };
+                        return this.scheduleReconnect();
+                    }
+                    socket = ws;
+
+                    ws.onopen = () => ws.send(JSON.stringify({ event: 'auth', args: [info.token] }));
+                    ws.onmessage = (ev) => this.onMessage(ev.data);
+                    ws.onclose = () => { if (!closed) { this.stats = { ...this.stats, state: 'unreachable' }; this.scheduleReconnect(); } };
+                    ws.onerror = () => ws.close();
+                },
+
+                scheduleReconnect() {
+                    if (reconnectTimer || closed) return;
+                    reconnectTimer = setTimeout(() => { reconnectTimer = null; this.connect(); }, 3000);
+                },
+
+                onMessage(data) {
+                    let m;
+                    try { m = JSON.parse(data); } catch (e) { return; }
+                    const a = m.args || [];
+                    switch (m.event) {
+                        case 'console output':
+                            this.append(this.strip(a[0] || ''));
+                            break;
+                        case 'status':
+                            this.stats = { ...this.stats, state: a[0] };
+                            break;
+                        case 'stats':
+                            try { this.stats = JSON.parse(a[0]); } catch (e) {}
+                            break;
+                        case 'error':
+                            this.append('\n[error] ' + (a[0] || '') + '\n');
+                            break;
+                    }
+                },
+
+                append(text) {
+                    this.logs += text;
+                    if (this.logs.length > 200000) this.logs = this.logs.slice(-200000);
+                    this.$nextTick(() => {
+                        if (this.$refs.console) this.$refs.console.scrollTop = this.$refs.console.scrollHeight;
+                    });
+                },
+
+                async pollInstall() {
+                    try {
                         const il = await (await fetch(c.installLogUrl)).json();
                         this.installLog = this.strip(il.log);
-                        this.$nextTick(() => {
-                            if (this.$refs.console) this.$refs.console.scrollTop = this.$refs.console.scrollHeight;
-                            if (this.$refs.install) this.$refs.install.scrollTop = this.$refs.install.scrollHeight;
-                        });
-                    } catch (e) { this.stats = { state: 'unreachable' }; }
+                        this.$nextTick(() => { if (this.$refs.install) this.$refs.install.scrollTop = this.$refs.install.scrollHeight; });
+                    } catch (e) {}
                 },
+
                 async power(action) {
                     await fetch(c.powerUrl, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': c.csrf }, body: JSON.stringify({ action }) });
-                    setTimeout(() => this.poll(), 800);
                 },
-                async sendCommand() {
+
+                sendCommand() {
                     const cmd = this.commandInput.trim();
-                    if (!cmd) return;
+                    if (!cmd || !socket || socket.readyState !== WebSocket.OPEN) return;
                     this.commandInput = '';
-                    await fetch(c.commandUrl, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': c.csrf }, body: JSON.stringify({ command: cmd }) });
-                    setTimeout(() => this.poll(), 400);
+                    this.append('> ' + cmd + '\n');
+                    socket.send(JSON.stringify({ event: 'command', args: [cmd] }));
                 },
             };
         }
