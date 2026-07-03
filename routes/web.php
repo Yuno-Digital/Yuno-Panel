@@ -38,9 +38,12 @@ Route::middleware('auth')->group(function () {
     Route::get('/servers/{server}/ws', [ServerController::class, 'websocket'])->name('servers.ws');
     Route::get('/servers/{server}/stats', [ServerController::class, 'stats'])->name('servers.stats');
     Route::get('/servers/{server}/logs', [ServerController::class, 'logs'])->name('servers.logs');
-    Route::get('/servers/{server}/files', [ServerController::class, 'files'])->name('servers.files');
+    Route::get('/servers/{server}/files/list', [ServerController::class, 'files'])->name('servers.files');
     Route::get('/servers/{server}/files/contents', [ServerController::class, 'fileRead'])->name('servers.files.read');
     Route::post('/servers/{server}/files/write', [ServerController::class, 'fileWrite'])->name('servers.files.write');
+    // Deep-linkable UI tab, e.g. /servers/5/startup — resolves to the show page.
+    Route::get('/servers/{server}/{tab}', [ServerController::class, 'show'])
+        ->whereIn('tab', ['console', 'files', 'startup', 'settings'])->name('servers.show.tab');
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');

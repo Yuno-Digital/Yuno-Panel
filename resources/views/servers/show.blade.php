@@ -9,13 +9,30 @@
     @php
         $editable = $server->egg ? $server->egg->variables->where('user_editable', true) : collect();
         $values = $server->variables->mapWithKeys(fn ($sv) => [optional($sv->eggVariable)->env_variable => $sv->variable_value]);
+
+        // Startup command presets and docker images offered by the egg.
+        $startupPresets = collect($server->egg?->startup_commands ?? [])
+            ->map(fn ($c) => is_array($c)
+                ? ['name' => $c['name'] ?? '', 'command' => (string) ($c['command'] ?? '')]
+                : ['name' => '', 'command' => (string) $c])
+            ->filter(fn ($c) => $c['command'] !== '')->values();
+        $dockerImages = collect($server->egg?->docker_images ?? [])
+            ->map(fn ($ref, $label) => ['label' => is_string($label) && $label !== '' ? $label : $ref, 'ref' => $ref])
+            ->values();
+        $editableMeta = $editable->map(fn ($v) => [
+            'env_variable' => $v->env_variable,
+            'name' => $v->name,
+            'description' => $v->description,
+            'default_value' => $v->default_value,
+        ])->values();
     @endphp
 
     <div class="py-10" x-data="serverConsole({
             wsInfoUrl: '{{ route('servers.ws', $server) }}',
             powerUrl: '{{ route('servers.power', $server) }}',
             csrf: '{{ csrf_token() }}',
-            tab: 'console'
+            basePath: '{{ url('servers/'.$server->id) }}',
+            tab: '{{ $activeTab }}'
          })" x-init="init()">
         <div class="max-w-6xl mx-auto sm:px-6 lg:px-8 space-y-6">
             @if (session('status'))
@@ -105,35 +122,80 @@
             </div>
 
             {{-- Startup --}}
-            <div x-show="tab === 'startup'" x-cloak class="space-y-6">
-                <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6">
-                    <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100">{{ __('Startup command') }}</h3>
-                    <pre class="mt-3 overflow-auto rounded-lg bg-gray-900 text-gray-100 text-xs font-mono p-4 whitespace-pre-wrap">{{ $server->startup ?: __('—') }}</pre>
-                </div>
+            <div x-show="tab === 'startup'" x-cloak class="space-y-6"
+                 x-data="startupEditor({
+                     presets: @js($startupPresets),
+                     images: @js($dockerImages),
+                     variables: @js($editableMeta),
+                     current: {
+                         startup: @js($server->startup ?? ''),
+                         dockerImage: @js($server->docker_image ?? ''),
+                         values: @js($values),
+                         memory: {{ (int) $server->memory_mb }},
+                         port: {{ (int) ($server->allocation?->port ?? 0) }},
+                         ip: @js($server->allocation?->ip ?? '0.0.0.0'),
+                     },
+                 })">
+                <form method="POST" action="{{ route('servers.update', $server) }}" class="space-y-6">
+                    @csrf @method('PATCH')
 
-                <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6">
-                    <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100">{{ __('Startup variables') }}</h3>
-                    @if ($editable->isEmpty())
-                        <p class="mt-3 text-sm text-gray-500 dark:text-gray-400">{{ __('There are no editable settings for this server.') }}</p>
-                    @else
-                        <form method="POST" action="{{ route('servers.update', $server) }}" class="mt-5 space-y-5">
-                            @csrf @method('PATCH')
-                            @foreach ($editable as $variable)
+                    {{-- Startup command + docker image selectors --}}
+                    <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6 grid gap-x-10 gap-y-6 sm:grid-cols-2">
+                        <div>
+                            <x-input-label :value="__('Startup command')" />
+                            <select name="startup" x-model="startup"
+                                    class="mt-1 block w-full text-sm rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 focus:border-indigo-500 focus:ring-indigo-500">
+                                <template x-for="(p, i) in presetOptions" :key="i">
+                                    <option :value="p.command" x-text="p.name || 'Default'"></option>
+                                </template>
+                            </select>
+                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ __('Choose one of the egg\'s startup commands.') }}</p>
+                        </div>
+                        <div x-show="imageOptions.length">
+                            <x-input-label :value="__('Docker image')" />
+                            <select name="docker_image" x-model="dockerImage"
+                                    class="mt-1 block w-full text-sm rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 focus:border-indigo-500 focus:ring-indigo-500">
+                                <template x-for="(img, i) in imageOptions" :key="i">
+                                    <option :value="img.ref" x-text="img.label"></option>
+                                </template>
+                            </select>
+                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ __('The container image this server runs in.') }}</p>
+                        </div>
+                    </div>
+
+                    {{-- Live preview with variables substituted --}}
+                    <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100">{{ __('Preview') }}</h3>
+                            <button type="button" @click="showPreview = !showPreview"
+                                    class="text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:underline"
+                                    x-text="showPreview ? '{{ __('Hide') }}' : '{{ __('Show') }}'"></button>
+                        </div>
+                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ __('The startup command with the variables below resolved.') }}</p>
+                        <pre x-show="showPreview" x-text="preview"
+                             class="mt-3 overflow-auto rounded-lg bg-gray-900 text-gray-100 text-xs font-mono p-4 whitespace-pre-wrap"></pre>
+                    </div>
+
+                    {{-- Editable variables --}}
+                    <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6">
+                        <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100">{{ __('Startup variables') }}</h3>
+                        <template x-if="variables.length === 0">
+                            <p class="mt-3 text-sm text-gray-500 dark:text-gray-400">{{ __('There are no editable settings for this server.') }}</p>
+                        </template>
+                        <div class="mt-5 space-y-5">
+                            <template x-for="v in variables" :key="v.env_variable">
                                 <div>
-                                    <x-input-label :for="'var_'.$variable->id" :value="$variable->name" />
-                                    <x-text-input :id="'var_'.$variable->id" type="text" class="mt-1 block w-full font-mono text-sm"
-                                                  :name="'variables['.$variable->env_variable.']'"
-                                                  :value="old('variables.'.$variable->env_variable, $values[$variable->env_variable] ?? $variable->default_value)" />
-                                    @if ($variable->description)
-                                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ $variable->description }}</p>
-                                    @endif
-                                    <x-input-error :messages="$errors->get('variables.'.$variable->env_variable)" class="mt-2" />
+                                    <label class="block font-medium text-sm text-gray-700 dark:text-gray-300" x-text="v.name"></label>
+                                    <input type="text" x-model="values[v.env_variable]" :name="'variables[' + v.env_variable + ']'"
+                                           class="mt-1 block w-full font-mono text-sm rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 focus:border-indigo-500 focus:ring-indigo-500">
+                                    <p x-show="v.description" x-text="v.description" class="mt-1 text-xs text-gray-500 dark:text-gray-400"></p>
                                 </div>
-                            @endforeach
-                            <x-primary-button>{{ __('Save') }}</x-primary-button>
-                        </form>
-                    @endif
-                </div>
+                            </template>
+                        </div>
+                    </div>
+
+                    <x-primary-button>{{ __('Save') }}</x-primary-button>
+                </form>
             </div>
 
             {{-- Settings --}}
@@ -194,6 +256,12 @@
                     // would stream every log line twice).
                     if (started) return;
                     started = true;
+
+                    // Keep the URL in sync with the active tab so a reload lands
+                    // on the same one (e.g. /servers/5/startup).
+                    if (c.basePath) {
+                        this.$watch('tab', (t) => window.history.replaceState({}, '', c.basePath + '/' + t));
+                    }
 
                     this.connect();
                     window.addEventListener('beforeunload', () => { closed = true; if (socket) socket.close(); });
@@ -316,6 +384,59 @@
                 up() { this.path = this.path.replace(/\/[^/]*$/, '') || '/'; this.load(); },
                 async save() {
                     await fetch(c.writeUrl, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': c.csrf }, body: JSON.stringify({ path: this.editing, contents: this.contents }) });
+                },
+            };
+        }
+
+        function startupEditor(c) {
+            // Seed each editable variable's value from the server, falling back
+            // to the egg default.
+            const values = {};
+            (c.variables || []).forEach((v) => {
+                const saved = c.current.values ? c.current.values[v.env_variable] : undefined;
+                values[v.env_variable] = (saved !== undefined && saved !== null) ? saved : (v.default_value ?? '');
+            });
+
+            return {
+                variables: c.variables || [],
+                server: c.current,
+                startup: c.current.startup || '',
+                dockerImage: c.current.dockerImage || '',
+                values,
+                showPreview: true,
+
+                // Egg presets, plus the current command/image if it isn't one of
+                // them, so nothing selected gets silently dropped.
+                get presetOptions() {
+                    const list = (c.presets || []).slice();
+                    if (this.startup && !list.some((p) => p.command === this.startup)) {
+                        list.unshift({ name: 'Current', command: this.startup });
+                    }
+                    return list;
+                },
+                get imageOptions() {
+                    const list = (c.images || []).slice();
+                    if (this.dockerImage && !list.some((i) => i.ref === this.dockerImage)) {
+                        list.unshift({ label: 'Current', ref: this.dockerImage });
+                    }
+                    return list;
+                },
+
+                // The startup command with its variable placeholders resolved.
+                get preview() {
+                    let cmd = this.startup || '';
+                    const env = Object.assign({}, this.values, {
+                        SERVER_MEMORY: this.server.memory,
+                        SERVER_PORT: this.server.port,
+                        SERVER_IP: this.server.ip,
+                    });
+                    // Build the "{{" / "}}" markers by concatenation so Blade
+                    // doesn't try to parse them as echoes.
+                    const open = '{' + '{', close = '}' + '}';
+                    for (const k of Object.keys(env)) {
+                        cmd = cmd.split(open + k + close).join(env[k] ?? '');
+                    }
+                    return cmd;
                 },
             };
         }

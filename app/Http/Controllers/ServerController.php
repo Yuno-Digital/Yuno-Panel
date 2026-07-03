@@ -8,6 +8,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class ServerController extends Controller
@@ -33,31 +34,57 @@ class ServerController extends Controller
     /**
      * Show the management page for a single server the user may access.
      */
-    public function show(Request $request, Server $server): View
+    public function show(Request $request, Server $server, ?string $tab = null): View
     {
         $this->authorizeServer($request, $server);
 
         $server->load(['egg.variables', 'node', 'allocation', 'variables.eggVariable']);
 
-        return view('servers.show', compact('server'));
+        $tabs = ['console', 'files', 'startup', 'settings'];
+        $activeTab = in_array($tab, $tabs, true) ? $tab : 'console';
+
+        return view('servers.show', compact('server', 'activeTab'));
     }
 
     /**
-     * Let the owner update the values of user-editable egg variables.
+     * Let the owner update the startup command, docker image and the values of
+     * the user-editable egg variables.
      */
     public function update(Request $request, Server $server): RedirectResponse
     {
         $this->authorizeServer($request, $server);
 
-        $editable = $server->egg
-            ? $server->egg->variables->where('user_editable', true)
+        $egg = $server->egg;
+
+        $editable = $egg
+            ? $egg->variables->where('user_editable', true)
             : collect();
 
-        $rules = [];
+        // Allowed docker images and startup commands come from the egg; the
+        // server's current values are always allowed so they stay selectable.
+        $images = collect($egg?->docker_images ?? [])->values()
+            ->push($server->docker_image)->filter()->unique()->values()->all();
+
+        $commands = collect($egg?->startup_commands ?? [])
+            ->map(fn ($c) => is_array($c) ? ($c['command'] ?? '') : (string) $c)
+            ->push($server->startup)->filter()->unique()->values()->all();
+
+        $rules = [
+            'docker_image' => ['nullable', 'string', $images ? Rule::in($images) : 'string'],
+            'startup' => ['nullable', 'string', $commands ? Rule::in($commands) : 'string'],
+        ];
         foreach ($editable as $variable) {
             $rules["variables.{$variable->env_variable}"] = $variable->rules ?: 'nullable|string';
         }
-        $request->validate($rules);
+        $validated = $request->validate($rules);
+
+        if (! empty($validated['docker_image'])) {
+            $server->docker_image = $validated['docker_image'];
+        }
+        if (! empty($validated['startup'])) {
+            $server->startup = $validated['startup'];
+        }
+        $server->save();
 
         foreach ($editable as $variable) {
             $server->variables()->updateOrCreate(
@@ -66,7 +93,7 @@ class ServerController extends Controller
             );
         }
 
-        return redirect()->route('servers.show', $server)->with('status', 'Settings saved.');
+        return redirect()->route('servers.show', $server)->with('status', 'Startup settings saved.');
     }
 
     /**
