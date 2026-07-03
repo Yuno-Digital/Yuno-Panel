@@ -123,6 +123,17 @@ class ServerController extends Controller
     }
 
     /**
+     * Issue the console WebSocket connection details (daemon ws URL + a
+     * short-lived signed token) for the browser to connect directly to the node.
+     */
+    public function websocket(Request $request, Server $server): JsonResponse
+    {
+        $this->authorizeServer($request, $server);
+
+        return response()->json($this->wings->websocket($server->load('node')));
+    }
+
+    /**
      * Live resource stats (JSON, polled by the console page).
      */
     public function stats(Request $request, Server $server): JsonResponse

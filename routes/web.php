@@ -35,6 +35,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/servers/{server}/install', [ServerController::class, 'install'])->name('servers.install');
     Route::post('/servers/{server}/power', [ServerController::class, 'power'])->name('servers.power');
     Route::post('/servers/{server}/command', [ServerController::class, 'command'])->name('servers.command');
+    Route::get('/servers/{server}/ws', [ServerController::class, 'websocket'])->name('servers.ws');
     Route::get('/servers/{server}/stats', [ServerController::class, 'stats'])->name('servers.stats');
     Route::get('/servers/{server}/logs', [ServerController::class, 'logs'])->name('servers.logs');
     Route::get('/servers/{server}/install-log', [ServerController::class, 'installLog'])->name('servers.install-log');
