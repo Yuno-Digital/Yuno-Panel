@@ -43,9 +43,9 @@
                     <button @click="power('start')" class="px-3 py-1.5 rounded-md text-sm font-medium bg-green-600 text-white hover:bg-green-700">{{ __('Start') }}</button>
                     <button @click="power('restart')" class="px-3 py-1.5 rounded-md text-sm font-medium bg-amber-500 text-white hover:bg-amber-600">{{ __('Restart') }}</button>
                     <button @click="power('stop')" class="px-3 py-1.5 rounded-md text-sm font-medium bg-red-600 text-white hover:bg-red-700">{{ __('Stop') }}</button>
-                    <form method="POST" action="{{ route('servers.install', $server) }}" onsubmit="return confirm('Reinstall the container? Files are kept.')">
+                    <form method="POST" action="{{ route('servers.install', $server) }}" onsubmit="return confirm('(Re)install the container? Files are kept.')">
                         @csrf
-                        <x-secondary-button>{{ __('Install') }}</x-secondary-button>
+                        <x-secondary-button type="submit">{{ __('Install') }}</x-secondary-button>
                     </form>
                 </div>
             </div>
