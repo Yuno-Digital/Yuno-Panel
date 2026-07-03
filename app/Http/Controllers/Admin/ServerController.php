@@ -58,7 +58,7 @@ class ServerController extends Controller
         return redirect()->route('admin.servers.edit', $server)->with(
             'status',
             $installed
-                ? __('Server created and installed on the node.')
+                ? __('Server created — installing on the node. The image may take a moment to download.')
                 : __('Server created. The node was unreachable — install it later from the server page.'),
         );
     }
