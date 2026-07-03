@@ -209,6 +209,22 @@ class ServerController extends Controller
     }
 
     /**
+     * Delete one or more files/directories.
+     */
+    public function fileDelete(Request $request, Server $server): JsonResponse
+    {
+        $this->authorizeServer($request, $server);
+        $data = $request->validate([
+            'paths' => ['required', 'array', 'min:1'],
+            'paths.*' => ['required', 'string'],
+        ]);
+
+        $ok = $this->wings->deleteFiles($server->load('node'), $data['paths']);
+
+        return response()->json(['deleted' => $ok], $ok ? 200 : 502);
+    }
+
+    /**
      * Owners may manage their own servers; admins may manage any.
      */
     private function authorizeServer(Request $request, Server $server): void

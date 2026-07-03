@@ -90,29 +90,84 @@
 
             {{-- Files --}}
             <div x-show="tab === 'files'" x-cloak
-                 x-data="fileManager({ base: '{{ route('servers.files', $server) }}', readUrl: '{{ route('servers.files.read', $server) }}', writeUrl: '{{ route('servers.files.write', $server) }}', csrf: '{{ csrf_token() }}' })"
+                 x-data="fileManager({ base: '{{ route('servers.files', $server) }}', readUrl: '{{ route('servers.files.read', $server) }}', writeUrl: '{{ route('servers.files.write', $server) }}', deleteUrl: '{{ route('servers.files.delete', $server) }}', csrf: '{{ csrf_token() }}' })"
                  x-init="load()">
-                <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-4">
-                    <div class="flex items-center gap-3 text-sm text-gray-500 dark:text-gray-400 mb-3">
+                <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg overflow-hidden">
+                    {{-- Toolbar: breadcrumb + search --}}
+                    <div class="flex items-center gap-3 text-sm text-gray-500 dark:text-gray-400 p-4 border-b border-gray-100 dark:border-gray-700">
                         <button @click="up()" x-show="path !== '/'" class="hover:underline shrink-0">⬑ {{ __('up') }}</button>
                         <span class="font-mono truncate" x-text="path"></span>
                         <input x-model="search" type="search" autocomplete="off"
                                placeholder="{{ __('Search files…') }}"
                                class="ms-auto w-48 max-w-[45%] text-sm rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:border-indigo-500 focus:ring-indigo-500">
                     </div>
-                    <ul class="divide-y divide-gray-100 dark:divide-gray-700">
-                        <template x-for="e in filtered" :key="e.name">
-                            <li class="py-2 flex items-center justify-between text-sm">
-                                <button @click="open(e)" class="flex items-center gap-2 text-gray-800 dark:text-gray-200 hover:text-indigo-600">
-                                    <span x-text="e.directory ? '📁' : '📄'"></span>
-                                    <span x-text="e.name"></span>
-                                </button>
-                                <span class="text-xs text-gray-400" x-show="!e.directory" x-text="e.size + ' B'"></span>
-                            </li>
-                        </template>
-                        <li x-show="filtered.length === 0" class="py-3 text-sm text-gray-500 dark:text-gray-400"
-                            x-text="search ? '{{ __('No files match your search.') }}' : '{{ __('Empty or unreachable.') }}'"></li>
-                    </ul>
+
+                    {{-- Bulk actions when something is selected --}}
+                    <div x-show="selected.length" x-cloak
+                         class="flex items-center gap-3 px-4 py-2 text-sm bg-indigo-50 dark:bg-indigo-900/20 border-b border-indigo-100 dark:border-indigo-900/40">
+                        <span class="text-gray-600 dark:text-gray-300"><span x-text="selected.length"></span> {{ __('selected') }}</span>
+                        <button @click="deleteSelected()" class="ms-auto inline-flex items-center gap-1 font-medium text-red-600 hover:text-red-700">
+                            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/></svg>
+                            {{ __('Delete') }}
+                        </button>
+                    </div>
+
+                    {{-- File table --}}
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="text-left text-xs uppercase tracking-wide text-gray-400 dark:text-gray-500 border-b border-gray-100 dark:border-gray-700">
+                                <th class="w-10 px-4 py-2"><input type="checkbox" @change="toggleAll()" :checked="allSelected"
+                                        class="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"></th>
+                                <th class="px-2 py-2 font-medium">{{ __('Name') }}</th>
+                                <th class="px-2 py-2 font-medium text-right w-28">{{ __('Size') }}</th>
+                                <th class="px-2 py-2 font-medium w-44 hidden sm:table-cell">{{ __('Modified') }}</th>
+                                <th class="px-4 py-2 w-28"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template x-for="e in filtered" :key="e.name">
+                                <tr class="border-b border-gray-50 dark:border-gray-700/50 hover:bg-gray-50 dark:hover:bg-gray-700/30">
+                                    <td class="px-4 py-2"><input type="checkbox" :value="e.name" x-model="selected"
+                                            class="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"></td>
+                                    <td class="px-2 py-2 min-w-0">
+                                        <button @click="open(e)" class="flex items-center gap-2 text-gray-800 dark:text-gray-200 hover:text-indigo-600 max-w-full">
+                                            <span class="shrink-0" x-text="e.directory ? '📁' : '📄'"></span>
+                                            <span class="truncate" x-text="e.name"></span>
+                                        </button>
+                                    </td>
+                                    <td class="px-2 py-2 text-right text-gray-400 dark:text-gray-500 whitespace-nowrap" x-text="e.directory ? '—' : fmtSize(e.size)"></td>
+                                    <td class="px-2 py-2 text-gray-400 dark:text-gray-500 whitespace-nowrap hidden sm:table-cell" x-text="fmtDate(e.modified)"></td>
+                                    <td class="px-4 py-2">
+                                        <div class="flex items-center justify-end gap-0.5 text-gray-400">
+                                            {{-- Open / view --}}
+                                            <button @click="open(e)" title="{{ __('Open') }}" class="p-1.5 rounded hover:text-indigo-600 hover:bg-gray-100 dark:hover:bg-gray-700">
+                                                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                                            </button>
+                                            {{-- Three-dot menu --}}
+                                            <div class="relative" x-data="{ menu: false }" @click.outside="menu = false">
+                                                <button @click="menu = !menu" title="{{ __('More') }}" class="p-1.5 rounded hover:text-indigo-600 hover:bg-gray-100 dark:hover:bg-gray-700">
+                                                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 7a1.25 1.25 0 100-2.5A1.25 1.25 0 0012 7zM12 13.25a1.25 1.25 0 100-2.5 1.25 1.25 0 000 2.5zM12 19.5a1.25 1.25 0 100-2.5 1.25 1.25 0 000 2.5z"/></svg>
+                                                </button>
+                                                <div x-show="menu" x-cloak @click="menu = false"
+                                                     class="absolute right-0 z-10 mt-1 w-36 rounded-md bg-white dark:bg-gray-800 shadow-lg ring-1 ring-black/5 py-1 text-sm text-gray-700 dark:text-gray-200">
+                                                    <button @click="open(e)" class="block w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700" x-text="e.directory ? '{{ __('Open') }}' : '{{ __('Edit') }}'"></button>
+                                                    <button @click="deleteEntry(e)" class="block w-full text-left px-3 py-1.5 text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700">{{ __('Delete') }}</button>
+                                                </div>
+                                            </div>
+                                            {{-- Trash --}}
+                                            <button @click="deleteEntry(e)" title="{{ __('Delete') }}" class="p-1.5 rounded hover:text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700">
+                                                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/></svg>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </template>
+                            <tr x-show="filtered.length === 0">
+                                <td colspan="5" class="px-4 py-4 text-gray-500 dark:text-gray-400"
+                                    x-text="search ? '{{ __('No files match your search.') }}' : '{{ __('Empty or unreachable.') }}'"></td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
 
                 {{-- File editor modal (Monaco — the VS Code editor — with a textarea fallback) --}}
@@ -419,14 +474,32 @@
             let editor = null;
 
             return {
-                path: '/', entries: [], editing: null, contents: '', search: '', monacoReady: false,
+                path: '/', entries: [], editing: null, contents: '', search: '', monacoReady: false, selected: [],
                 // Entries matching the search box (folders already sorted first).
                 get filtered() {
                     const q = this.search.trim().toLowerCase();
                     return q ? this.entries.filter((e) => e.name.toLowerCase().includes(q)) : this.entries;
                 },
+                get allSelected() {
+                    return this.filtered.length > 0 && this.filtered.every((e) => this.selected.includes(e.name));
+                },
+                toggleAll() {
+                    const names = this.filtered.map((e) => e.name);
+                    this.selected = this.allSelected
+                        ? this.selected.filter((n) => !names.includes(n))
+                        : [...new Set([...this.selected, ...names])];
+                },
+                fmtSize(bytes) {
+                    if (bytes == null) return '';
+                    const u = ['B', 'KB', 'MB', 'GB']; let i = 0, n = bytes;
+                    while (n >= 1024 && i < u.length - 1) { n /= 1024; i++; }
+                    return (i === 0 ? n : n.toFixed(1)) + ' ' + u[i];
+                },
+                fmtDate(ts) { return ts ? new Date(ts * 1000).toLocaleString() : ''; },
+                fullPath(name) { return (this.path === '/' ? '' : this.path) + '/' + name; },
                 async load() {
                     this.search = '';
+                    this.selected = [];
                     try {
                         const r = await (await fetch(c.base + '?path=' + encodeURIComponent(this.path))).json();
                         // Folders first, then files, each sorted case-insensitively by name.
@@ -440,6 +513,34 @@
                 open(e) {
                     if (e.directory) { this.path = (this.path === '/' ? '' : this.path) + '/' + e.name; this.load(); }
                     else { this.read(e.name); }
+                },
+                async deleteEntry(e) {
+                    const r = await window.yunoConfirm({
+                        title: 'Delete "' + e.name + '"?',
+                        text: e.directory ? 'The folder and everything in it will be removed.' : 'This file will be removed.',
+                        icon: 'warning', confirmButtonText: 'Delete',
+                    });
+                    if (r.isConfirmed) this.deletePaths([e.name]);
+                },
+                async deleteSelected() {
+                    if (!this.selected.length) return;
+                    const r = await window.yunoConfirm({
+                        title: 'Delete ' + this.selected.length + ' item(s)?',
+                        text: 'The selected files and folders will be removed.',
+                        icon: 'warning', confirmButtonText: 'Delete',
+                    });
+                    if (r.isConfirmed) this.deletePaths([...this.selected]);
+                },
+                async deletePaths(names) {
+                    const paths = names.map((n) => this.fullPath(n));
+                    try {
+                        const res = await fetch(c.deleteUrl, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': c.csrf }, body: JSON.stringify({ paths }) });
+                        if (res.ok) window.yunoToast(names.length + ' {{ __('deleted') }}');
+                        else window.yunoToast('{{ __('Could not delete.') }}', 'error');
+                    } catch (e) {
+                        window.yunoToast('{{ __('Could not delete.') }}', 'error');
+                    }
+                    this.load();
                 },
                 async read(name) {
                     const p = (this.path === '/' ? '' : this.path) + '/' + name;

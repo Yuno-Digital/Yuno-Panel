@@ -233,6 +233,20 @@ class WingsClient
     }
 
     /**
+     * Delete one or more files/directories.
+     *
+     * @param  array<int, string>  $paths
+     */
+    public function deleteFiles(Server $server, array $paths): bool
+    {
+        try {
+            return $this->daemon($server)->post($this->url($server, '/files/delete'), ['paths' => array_values($paths)])->successful();
+        } catch (Throwable) {
+            return false;
+        }
+    }
+
+    /**
      * GET helper returning the decoded body or null on failure.
      *
      * @param  array<string, mixed>  $query
