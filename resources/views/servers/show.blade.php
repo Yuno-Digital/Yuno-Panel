@@ -16,6 +16,7 @@
             logsUrl: '{{ route('servers.logs', $server) }}',
             installLogUrl: '{{ route('servers.install-log', $server) }}',
             powerUrl: '{{ route('servers.power', $server) }}',
+            commandUrl: '{{ route('servers.command', $server) }}',
             csrf: '{{ csrf_token() }}',
             tab: 'console'
          })" x-init="init()">
@@ -63,6 +64,15 @@
             {{-- Console --}}
             <div x-show="tab === 'console'">
                 <pre x-ref="console" class="h-96 overflow-auto rounded-lg bg-gray-900 text-gray-100 text-xs font-mono p-4 whitespace-pre-wrap" x-text="logs || '{{ __('Waiting for output…') }}'"></pre>
+                <form @submit.prevent="sendCommand()" class="mt-2 flex gap-2">
+                    <span class="hidden sm:flex items-center text-gray-400 font-mono text-sm px-2">&gt;</span>
+                    <input x-model="commandInput" type="text" autocomplete="off" spellcheck="false"
+                           :placeholder="stats.state === 'running' ? '{{ __('Type a command and press Enter…') }}' : '{{ __('Server is not running') }}'"
+                           :disabled="stats.state !== 'running'"
+                           class="flex-1 font-mono text-sm rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 disabled:opacity-50">
+                    <button type="submit" :disabled="stats.state !== 'running'"
+                            class="px-4 py-2 rounded-md bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 disabled:opacity-50">{{ __('Send') }}</button>
+                </form>
             </div>
 
             {{-- Install log --}}
@@ -146,7 +156,7 @@
     <script>
         function serverConsole(c) {
             return {
-                tab: c.tab, stats: { state: 'loading' }, logs: '', installLog: '',
+                tab: c.tab, stats: { state: 'loading' }, logs: '', installLog: '', commandInput: '',
                 labels: { running: 'Running', exited: 'Offline', created: 'Installed (stopped)', restarting: 'Restarting', missing: 'Not installed', loading: 'Loading…', unreachable: 'Node unreachable' },
                 get stateLabel() { return this.labels[this.stats.state] || (this.stats.state || 'Unknown'); },
                 get stateColor() {
@@ -173,6 +183,13 @@
                 async power(action) {
                     await fetch(c.powerUrl, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': c.csrf }, body: JSON.stringify({ action }) });
                     setTimeout(() => this.poll(), 800);
+                },
+                async sendCommand() {
+                    const cmd = this.commandInput.trim();
+                    if (!cmd) return;
+                    this.commandInput = '';
+                    await fetch(c.commandUrl, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': c.csrf }, body: JSON.stringify({ command: cmd }) });
+                    setTimeout(() => this.poll(), 400);
                 },
             };
         }

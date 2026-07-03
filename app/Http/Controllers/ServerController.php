@@ -110,6 +110,19 @@ class ServerController extends Controller
     }
 
     /**
+     * Send a console command to the running server.
+     */
+    public function command(Request $request, Server $server): JsonResponse
+    {
+        $this->authorizeServer($request, $server);
+        $data = $request->validate(['command' => ['required', 'string', 'max:2000']]);
+
+        $ok = $this->wings->command($server->load('node'), $data['command']);
+
+        return response()->json(['sent' => $ok], $ok ? 200 : 502);
+    }
+
+    /**
      * Live resource stats (JSON, polled by the console page).
      */
     public function stats(Request $request, Server $server): JsonResponse

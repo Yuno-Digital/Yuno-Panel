@@ -132,6 +132,18 @@ class WingsClient
     }
 
     /**
+     * Send a console command to the running server.
+     */
+    public function command(Server $server, string $command): bool
+    {
+        try {
+            return $this->daemon($server)->post($this->url($server, '/command'), ['command' => $command])->successful();
+        } catch (Throwable) {
+            return false;
+        }
+    }
+
+    /**
      * Resource stats for the server, or null if unreachable.
      *
      * @return array<string, mixed>|null
