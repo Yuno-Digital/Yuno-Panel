@@ -32,7 +32,7 @@
                     <span class="text-gray-700 dark:text-gray-200" x-text="stateLabel"></span>
                 </span>
                 <span x-show="stats.state === 'missing'" x-cloak class="text-xs text-gray-500 dark:text-gray-400">
-                    {{ __('Not installed yet — click Install to create the server.') }}
+                    {{ __('Not installed yet — use Settings → Reinstall to create the server.') }}
                 </span>
                 <div class="text-sm text-gray-500 dark:text-gray-400">
                     CPU <span class="font-medium text-gray-800 dark:text-gray-200" x-text="(stats.cpu_percent ?? 0).toFixed(1) + '%'"></span>
@@ -45,11 +45,6 @@
                             class="px-3 py-1.5 rounded-md text-sm font-medium bg-amber-500 text-white hover:bg-amber-600 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-amber-500">{{ __('Restart') }}</button>
                     <button @click="power('stop')" :disabled="!canStop"
                             class="px-3 py-1.5 rounded-md text-sm font-medium bg-red-600 text-white hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-red-600">{{ __('Stop') }}</button>
-                    <form method="POST" action="{{ route('servers.install', $server) }}"
-                          data-confirm="(Re)install the container? Files are kept." data-confirm-button="Install" data-confirm-icon="question">
-                        @csrf
-                        <x-secondary-button type="submit" x-bind:disabled="stats.state === 'unreachable'">{{ __('Install') }}</x-secondary-button>
-                    </form>
                 </div>
             </div>
 
@@ -141,6 +136,17 @@
                             <x-primary-button>{{ __('Save') }}</x-primary-button>
                         </form>
                     @endif
+                </div>
+
+                {{-- Reinstall --}}
+                <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6 border border-red-200 dark:border-red-900/50">
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100">{{ __('Reinstall server') }}</h3>
+                    <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">{{ __('Re-runs the egg install script (image pull + setup). Your files are kept. Progress is shown live in the console.') }}</p>
+                    <form method="POST" action="{{ route('servers.install', $server) }}" class="mt-4"
+                          data-confirm="Reinstall the container? Your files are kept, but the install script will run again." data-confirm-button="Reinstall" data-confirm-icon="warning">
+                        @csrf
+                        <x-danger-button type="submit" x-bind:disabled="stats.state === 'unreachable'">{{ __('Reinstall') }}</x-danger-button>
+                    </form>
                 </div>
             </div>
 
