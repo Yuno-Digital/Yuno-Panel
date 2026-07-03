@@ -80,7 +80,9 @@ class ServerController extends Controller
         $ok = $this->wings->createContainer($server);
 
         return back()->with($ok ? 'status' : 'error',
-            $ok ? __('Server installed on the node.') : __('Could not reach the node daemon.'));
+            $ok
+                ? __('Installation started. The image may take a moment to download — refresh in a bit.')
+                : __('Could not reach the node daemon.'));
     }
 
     /**
