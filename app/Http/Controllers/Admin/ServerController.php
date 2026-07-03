@@ -8,6 +8,7 @@ use App\Models\Egg;
 use App\Models\Node;
 use App\Models\Server;
 use App\Models\User;
+use App\Services\WingsClient;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -18,6 +19,8 @@ use Illuminate\View\View;
 class ServerController extends Controller
 {
     private const STATUSES = ['offline', 'starting', 'running', 'stopping'];
+
+    public function __construct(private readonly WingsClient $wings) {}
 
     public function index(): View
     {
@@ -46,7 +49,18 @@ class ServerController extends Controller
             return $server;
         });
 
-        return redirect()->route('admin.servers.edit', $server)->with('status', 'Server created.');
+        // Auto-install on the node (like Pelican). If the daemon is unreachable
+        // the server is still created and can be installed later.
+        $installed = $this->wings->createContainer(
+            $server->load(['node', 'allocation', 'variables.eggVariable'])
+        );
+
+        return redirect()->route('admin.servers.edit', $server)->with(
+            'status',
+            $installed
+                ? __('Server created and installed on the node.')
+                : __('Server created. The node was unreachable — install it later from the server page.'),
+        );
     }
 
     public function edit(Server $server): View
