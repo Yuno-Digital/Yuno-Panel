@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 
-#[Fillable(['name', 'fqdn', 'daemon_port', 'daemon_token', 'is_online', 'memory_mb', 'disk_mb', 'description'])]
+#[Fillable(['name', 'fqdn', 'daemon_port', 'daemon_tls', 'daemon_token', 'is_online', 'memory_mb', 'disk_mb', 'description'])]
 #[Hidden(['daemon_token'])]
 class Node extends Model
 {
@@ -16,6 +16,7 @@ class Node extends Model
     {
         return [
             'is_online' => 'boolean',
+            'daemon_tls' => 'boolean',
             'daemon_port' => 'integer',
             'memory_mb' => 'integer',
             'disk_mb' => 'integer',
@@ -50,11 +51,14 @@ class Node extends Model
     }
 
     /**
-     * Base URL of this node's Wings daemon, e.g. http://host:8080.
+     * Base URL of this node's Wings daemon, e.g. https://host:8090. Uses HTTPS
+     * when the node is marked as TLS-enabled.
      */
     public function daemonUrl(): string
     {
-        return sprintf('http://%s:%d', $this->fqdn, $this->daemon_port);
+        $scheme = $this->daemon_tls ? 'https' : 'http';
+
+        return sprintf('%s://%s:%d', $scheme, $this->fqdn, $this->daemon_port);
     }
 
     /**

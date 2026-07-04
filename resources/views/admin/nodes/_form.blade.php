@@ -17,9 +17,19 @@
         <div>
             <x-input-label for="daemon_port" :value="__('Daemon port')" />
             <x-text-input id="daemon_port" name="daemon_port" type="number" class="mt-1 block w-full"
-                          :value="old('daemon_port', $node->daemon_port ?? 8080)" required />
+                          :value="old('daemon_port', $node->daemon_port ?? 8090)" required />
             <x-input-error :messages="$errors->get('daemon_port')" class="mt-2" />
         </div>
+    </div>
+
+    <div>
+        <label class="inline-flex items-center gap-2">
+            <input type="hidden" name="daemon_tls" value="0">
+            <input type="checkbox" name="daemon_tls" value="1" @checked(old('daemon_tls', $node->daemon_tls ?? false))
+                   class="rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-indigo-600 dark:checked:bg-indigo-500 focus:ring-indigo-500">
+            <span class="text-sm text-gray-700 dark:text-gray-300">{{ __('Use HTTPS (TLS) to reach the daemon') }}</span>
+        </label>
+        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ __('Enable if the Wings daemon serves HTTPS (ssl_cert/ssl_key set) or sits behind a TLS proxy.') }}</p>
     </div>
 
     <div>
