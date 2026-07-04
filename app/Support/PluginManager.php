@@ -127,6 +127,39 @@ class PluginManager
     }
 
     /**
+     * Remove a plugin: delete its folder and its stored state/settings.
+     */
+    public static function uninstall(string $id): bool
+    {
+        if (! array_key_exists($id, self::discover())) {
+            return false;
+        }
+
+        File::deleteDirectory(self::path().'/'.$id);
+
+        try {
+            Plugin::where('id', $id)->delete();
+            PluginSetting::where('plugin_id', $id)->delete();
+        } catch (Throwable) {
+            // ignore
+        }
+
+        return true;
+    }
+
+    /**
+     * Forget the cached plugin registry so the available list is refreshed.
+     */
+    public static function clearCache(): void
+    {
+        try {
+            cache()->forget('plugins.registry');
+        } catch (Throwable) {
+            // ignore
+        }
+    }
+
+    /**
      * A single stored setting for a plugin (falls back to $default / env).
      */
     public static function setting(string $pluginId, string $key, mixed $default = null): mixed

@@ -7,6 +7,7 @@ use App\Models\Plugin;
 use App\Support\PluginManager;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\View\View;
 
 class PluginController extends Controller
@@ -80,6 +81,30 @@ class PluginController extends Controller
         PluginManager::saveSettings($plugin, $values);
 
         return redirect()->route('admin.plugins.settings', $plugin)->with('status', __('Settings saved.'));
+    }
+
+    /**
+     * Uninstall a plugin (delete its folder and stored state).
+     */
+    public function uninstall(string $plugin): RedirectResponse
+    {
+        if (! PluginManager::uninstall($plugin)) {
+            return redirect()->route('admin.plugins.index')->with('error', __('Could not uninstall that plugin.'));
+        }
+
+        return redirect()->route('admin.plugins.index')->with('status', __('Plugin uninstalled.'));
+    }
+
+    /**
+     * Clear the plugin registry and app caches (so new plugins/routes appear).
+     */
+    public function clearCache(): RedirectResponse
+    {
+        PluginManager::clearCache();
+        Artisan::call('cache:clear');
+        Artisan::call('view:clear');
+
+        return redirect()->route('admin.plugins.index')->with('status', __('Cache cleared.'));
     }
 
     public function toggle(Request $request, string $plugin): RedirectResponse

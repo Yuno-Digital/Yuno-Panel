@@ -1,6 +1,10 @@
 <x-admin title="Plugins">
     <div class="mb-4 flex items-center justify-between">
         <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100">{{ __('Plugins') }}</h3>
+        <form method="POST" action="{{ route('admin.plugins.clear-cache') }}">
+            @csrf
+            <x-secondary-button type="submit">{{ __('Clear cache') }}</x-secondary-button>
+        </form>
     </div>
 
     <p class="mb-4 text-sm text-gray-500 dark:text-gray-400">
@@ -85,6 +89,11 @@
                             @else
                                 <x-primary-button type="submit">{{ __('Enable') }}</x-primary-button>
                             @endif
+                        </form>
+                        <form method="POST" action="{{ route('admin.plugins.uninstall', $plugin['id']) }}"
+                              data-confirm="Uninstall {{ $plugin['name'] }}? Its files and settings are removed." data-confirm-button="Uninstall">
+                            @csrf @method('DELETE')
+                            <button type="submit" class="px-3 py-2 text-sm font-medium text-red-600 hover:text-red-700 hover:underline">{{ __('Uninstall') }}</button>
                         </form>
                     </div>
                 </div>
