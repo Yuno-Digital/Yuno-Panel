@@ -15,6 +15,7 @@ use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Admin\WebhookController;
 use App\Http\Controllers\ClientApiKeyController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\InstallController;
 use App\Http\Controllers\NodeConfigController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProfileController;
@@ -22,6 +23,10 @@ use App\Http\Controllers\ServerController;
 use App\Http\Controllers\TwoFactorChallengeController;
 use App\Http\Controllers\TwoFactorController;
 use Illuminate\Support\Facades\Route;
+
+// Web installer (gated: redirects away once the panel is installed).
+Route::get('/install', [InstallController::class, 'show'])->name('install.show');
+Route::post('/install', [InstallController::class, 'store'])->name('install.store');
 
 Route::get('/', function () {
     // Logged-in users go to the dashboard, everyone else to the login page.
