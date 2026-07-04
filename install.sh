@@ -113,11 +113,19 @@ cat <<EOF
 
   Finish setup in your browser via the web installer:
 
-    Quick test:   php artisan serve --host 0.0.0.0 --port 8000
+    Quick test:   php artisan serve --host '[::]' --port 8000
                   then open  http://<server-ip>:8000/install
 
+    ('[::]' listens on IPv6 and IPv4 — use it on IPv6-only servers;
+     'http://[<ipv6>]:8000/install' works too.)
+
   For production, serve public/ with nginx + php-fpm (point the web root at
-  $DIR/public) and open  https://your-domain/install  to create the admin.
+  $DIR/public). Make nginx listen on both stacks:
+
+    listen 80;
+    listen [::]:80;
+
+  Then open  https://your-domain/install  to create the admin.
 
   The installer runs the migrations and creates your admin account.
 EOF
