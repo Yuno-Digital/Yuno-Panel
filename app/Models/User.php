@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
@@ -80,6 +81,16 @@ class User extends Authenticatable
     public function servers(): HasMany
     {
         return $this->hasMany(Server::class, 'owner_id');
+    }
+
+    /**
+     * Subuser assignments across the servers this user owns.
+     *
+     * @return HasManyThrough<ServerSubuser, Server, $this>
+     */
+    public function serverSubusers(): HasManyThrough
+    {
+        return $this->hasManyThrough(ServerSubuser::class, Server::class, 'owner_id', 'server_id');
     }
 
     /**
