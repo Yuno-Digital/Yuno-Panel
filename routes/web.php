@@ -12,6 +12,7 @@ use App\Http\Controllers\Admin\ServerController as AdminServerController;
 use App\Http\Controllers\Admin\SettingController;
 use App\Http\Controllers\Admin\UpgradeController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
+use App\Http\Controllers\Admin\WebhookController;
 use App\Http\Controllers\ClientApiKeyController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\NodeConfigController;
@@ -81,6 +82,7 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::resource('servers', AdminServerController::class)->except('show');
     Route::resource('users', AdminUserController::class)->except('show');
     Route::resource('roles', RoleController::class)->except('show');
+    Route::resource('webhooks', WebhookController::class)->except('show');
     Route::post('eggs/import', [EggImportController::class, 'store'])->name('eggs.import');
     Route::resource('eggs', EggController::class)->except('show');
     Route::post('eggs/{egg}/variables', [EggVariableController::class, 'store'])->name('eggs.variables.store');

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Server;
 use App\Notifications\PanelNotification;
 use App\Services\WingsClient;
+use App\Support\Webhooks;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -113,6 +114,9 @@ class ServerController extends Controller
                 __('":name" is being (re)installed.', ['name' => $server->name]),
                 route('servers.show', $server),
             ));
+            Webhooks::dispatch('server.reinstall', [
+                'server' => ['id' => $server->id, 'uuid' => $server->uuid, 'name' => $server->name],
+            ]);
         }
 
         return back()->with($ok ? 'status' : 'error',
@@ -130,6 +134,13 @@ class ServerController extends Controller
         $data = $request->validate(['action' => ['required', 'in:start,stop,restart']]);
 
         $ok = $this->wings->power($server->load('node'), $data['action']);
+
+        if ($ok) {
+            Webhooks::dispatch('server.power', [
+                'server' => ['id' => $server->id, 'uuid' => $server->uuid, 'name' => $server->name],
+                'action' => $data['action'],
+            ]);
+        }
 
         return back()->with($ok ? 'status' : 'error',
             $ok ? __('Power action sent: :a', ['a' => $data['action']]) : __('Could not reach the node daemon.'));
