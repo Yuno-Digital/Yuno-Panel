@@ -99,6 +99,7 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
 
     Route::get('plugins', [PluginController::class, 'index'])->name('plugins.index');
     Route::post('plugins/install', [PluginController::class, 'install'])->name('plugins.install');
+    Route::post('plugins/{plugin}/update', [PluginController::class, 'update'])->name('plugins.update');
     Route::post('plugins/clear-cache', [PluginController::class, 'clearCache'])->name('plugins.clear-cache');
     Route::get('plugins/{plugin}/settings', [PluginController::class, 'settings'])->name('plugins.settings');
     Route::put('plugins/{plugin}/settings', [PluginController::class, 'updateSettings'])->name('plugins.settings.update');

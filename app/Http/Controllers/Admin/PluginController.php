@@ -42,6 +42,22 @@ class PluginController extends Controller
     }
 
     /**
+     * Re-download an installed plugin to the latest version from the repository.
+     */
+    public function update(string $plugin): RedirectResponse
+    {
+        if (! array_key_exists($plugin, PluginManager::discover())) {
+            return redirect()->route('admin.plugins.index')->with('error', __('That plugin is not installed.'));
+        }
+
+        if (! PluginManager::update($plugin)) {
+            return redirect()->route('admin.plugins.index')->with('error', __('Could not update the plugin.'));
+        }
+
+        return redirect()->route('admin.plugins.index')->with('status', __('Plugin updated — reload the panel to apply.'));
+    }
+
+    /**
      * Show a plugin's settings form (fields declared in its plugin.json).
      */
     public function settings(string $plugin): View|RedirectResponse
