@@ -15,6 +15,99 @@ NODE_MAJOR="22"
 log()  { printf '\033[1;36m==>\033[0m %s\n' "$*"; }
 warn() { printf '\033[1;33m!  \033[0m %s\n' "$*"; }
 die()  { printf '\033[1;31mx  \033[0m %s\n' "$*" >&2; exit 1; }
+ask()  { local p="$1" v=""; printf '%s' "$p" >/dev/tty; read -r v </dev/tty || v=""; printf '%s' "$v"; }
+
+# Whether a domain resolves (A or AAAA) to one of this server's public IPs.
+domain_points_here() {
+    local domain="$1"
+    if [ -n "$SERVER_IP4" ] && dig +short A "$domain" 2>/dev/null | grep -qxF "$SERVER_IP4"; then return 0; fi
+    if [ -n "$SERVER_IP6" ] && dig +short AAAA "$domain" 2>/dev/null | grep -qxF "$SERVER_IP6"; then return 0; fi
+    return 1
+}
+
+# Write and enable an nginx site for the panel, listening on IPv4 + IPv6.
+write_nginx_site() {
+    local domain="$1"
+    cat >/tmp/yuno-site.conf <<'NGINX'
+server {
+    listen 80;
+    listen [::]:80;
+    server_name __DOMAIN__;
+    root __ROOT__;
+    index index.php;
+
+    location / { try_files $uri $uri/ /index.php?$query_string; }
+    location ~ \.php$ {
+        include snippets/fastcgi-php.conf;
+        fastcgi_pass unix:__FPM__;
+    }
+    location ~ /\.(?!well-known).* { deny all; }
+}
+NGINX
+    sed -i "s#__DOMAIN__#${domain}#g; s#__ROOT__#${DIR}/public#g; s#__FPM__#/run/php/php${PHP}-fpm.sock#g" /tmp/yuno-site.conf
+    $SUDO mv /tmp/yuno-site.conf "/etc/nginx/sites-available/${domain}.conf"
+    $SUDO ln -sf "/etc/nginx/sites-available/${domain}.conf" "/etc/nginx/sites-enabled/${domain}.conf"
+    [ -e /etc/nginx/sites-enabled/default ] && $SUDO rm -f /etc/nginx/sites-enabled/default
+}
+
+# Interactive nginx + Let's Encrypt setup: ask for a domain, verify DNS, then
+# configure nginx and issue a certificate. Re-prompts on a mismatch.
+setup_nginx() {
+    if [ ! -e /dev/tty ]; then
+        warn "No terminal available — skipping nginx/SSL setup (run 'bash install.sh' interactively for it)."
+        return 0
+    fi
+
+    log "Installing nginx, PHP-FPM and certbot"
+    $SUDO apt-get install -y nginx "php${PHP}-fpm" certbot python3-certbot-nginx dnsutils
+
+    SERVER_IP4="$(curl -4 -fsSL --max-time 6 https://api.ipify.org 2>/dev/null || true)"
+    SERVER_IP6="$(curl -6 -fsSL --max-time 6 https://api6.ipify.org 2>/dev/null || true)"
+    log "This server's public IP — IPv4: ${SERVER_IP4:-none} · IPv6: ${SERVER_IP6:-none}"
+
+    local domain=""
+    while true; do
+        domain="$(ask 'Domain for the panel (empty to skip nginx setup): ')"
+        [ -z "$domain" ] && { warn "Skipping nginx/SSL setup."; return 0; }
+
+        if domain_points_here "$domain"; then
+            log "$domain points to this server — continuing."
+            break
+        fi
+
+        warn "$domain does not resolve to this server."
+        warn "  $domain → A: $(dig +short A "$domain" 2>/dev/null | tr '\n' ' ')AAAA: $(dig +short AAAA "$domain" 2>/dev/null | tr '\n' ' ')"
+        warn "  Point the DNS record at this server, then try again."
+        case "$(ask 'Enter a different domain? [Y/n]: ')" in [Nn]*) return 0 ;; esac
+    done
+
+    local email
+    email="$(ask "Email for Let's Encrypt (empty = register without email): ")"
+
+    write_nginx_site "$domain"
+    if ! $SUDO nginx -t; then
+        warn "nginx config test failed — skipping SSL."
+        return 0
+    fi
+    $SUDO systemctl reload nginx
+
+    log "Requesting a certificate for $domain"
+    if [ -n "$email" ]; then
+        $SUDO certbot --nginx -d "$domain" --non-interactive --agree-tos -m "$email" --redirect || warn "certbot failed — is port 80 open and DNS correct?"
+    else
+        $SUDO certbot --nginx -d "$domain" --non-interactive --agree-tos --register-unsafely-without-email --redirect || warn "certbot failed — is port 80 open and DNS correct?"
+    fi
+
+    # Point the app at the domain.
+    if grep -q '^APP_URL=' .env; then
+        sed -i "s#^APP_URL=.*#APP_URL=https://${domain}#" .env
+    else
+        echo "APP_URL=https://${domain}" >> .env
+    fi
+    php artisan config:clear >/dev/null 2>&1 || true
+
+    PANEL_URL="https://${domain}"
+}
 
 # Run privileged commands with sudo unless we are already root.
 SUDO=""
@@ -106,7 +199,22 @@ fi
 
 php artisan storage:link >/dev/null 2>&1 || true
 
+# Optional: configure nginx + a Let's Encrypt certificate for a domain.
+PANEL_URL=""
+SERVER_IP4=""
+SERVER_IP6=""
+setup_nginx
+
 log "Done!"
+if [ -n "$PANEL_URL" ]; then
+cat <<EOF
+
+  Yuno Panel is installed in: $DIR
+  nginx is configured and serving:  $PANEL_URL
+
+  Open  $PANEL_URL/install  to run the migrations and create your admin account.
+EOF
+else
 cat <<EOF
 
   Yuno Panel is installed in: $DIR
@@ -119,13 +227,9 @@ cat <<EOF
     ('[::]' listens on IPv6 and IPv4 — use it on IPv6-only servers;
      'http://[<ipv6>]:8000/install' works too.)
 
-  For production, serve public/ with nginx + php-fpm (point the web root at
-  $DIR/public). Make nginx listen on both stacks:
-
-    listen 80;
-    listen [::]:80;
-
-  Then open  https://your-domain/install  to create the admin.
+  For production, re-run and enter a domain when asked, or serve public/ with
+  nginx + php-fpm yourself ('listen 80; listen [::]:80;').
 
   The installer runs the migrations and creates your admin account.
 EOF
+fi
