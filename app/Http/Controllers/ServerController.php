@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Server;
+use App\Models\User;
 use App\Notifications\PanelNotification;
 use App\Services\WingsClient;
 use App\Support\Webhooks;
@@ -26,7 +27,10 @@ class ServerController extends Controller
         $user = Auth::user();
 
         $servers = Server::with(['node', 'owner', 'egg', 'allocation'])
-            ->when(! $user->isAdmin(), fn ($query) => $query->where('owner_id', $user->id))
+            ->when(! $user->isAdmin(), fn ($query) => $query->where(function ($q) use ($user) {
+                $q->where('owner_id', $user->id)
+                    ->orWhereHas('subusers', fn ($s) => $s->whereKey($user->id));
+            }))
             ->latest()
             ->get();
 
@@ -40,12 +44,20 @@ class ServerController extends Controller
     {
         $this->authorizeServer($request, $server);
 
-        $server->load(['egg.variables', 'node', 'allocation', 'variables.eggVariable']);
+        $server->load(['egg.variables', 'node', 'allocation', 'variables.eggVariable', 'subusers']);
 
-        $tabs = ['console', 'files', 'startup', 'settings'];
-        $activeTab = in_array($tab, $tabs, true) ? $tab : 'console';
+        // What the current user may do here (owner/admin can do everything).
+        $user = $request->user();
+        $manages = $user->isAdmin() || $server->owner_id === $user->id;
+        $permissions = $manages
+            ? array_keys(Server::SUBUSER_PERMISSIONS)
+            : ($server->subuserPermissions($user) ?? []);
 
-        return view('servers.show', compact('server', 'activeTab'));
+        // Tabs the user is allowed to see (Settings is always available).
+        $tabs = array_values(array_filter(['console', 'files', 'startup', 'settings'], fn ($t) => $t === 'settings' || in_array($t, $permissions, true)));
+        $activeTab = in_array($tab, $tabs, true) ? $tab : ($tabs[0] ?? 'settings');
+
+        return view('servers.show', compact('server', 'activeTab', 'manages', 'permissions', 'tabs'));
     }
 
     /**
@@ -54,7 +66,7 @@ class ServerController extends Controller
      */
     public function update(Request $request, Server $server): RedirectResponse
     {
-        $this->authorizeServer($request, $server);
+        $this->authorizeServer($request, $server, 'startup');
 
         $egg = $server->egg;
 
@@ -103,7 +115,7 @@ class ServerController extends Controller
      */
     public function install(Request $request, Server $server): RedirectResponse
     {
-        $this->authorizeServer($request, $server);
+        $this->authorizeServer($request, $server, 'reinstall');
         $server->load(['node', 'egg', 'allocation', 'variables.eggVariable']);
 
         $ok = $this->wings->createContainer($server);
@@ -130,7 +142,7 @@ class ServerController extends Controller
      */
     public function power(Request $request, Server $server): RedirectResponse
     {
-        $this->authorizeServer($request, $server);
+        $this->authorizeServer($request, $server, 'power');
         $data = $request->validate(['action' => ['required', 'in:start,stop,restart']]);
 
         $ok = $this->wings->power($server->load('node'), $data['action']);
@@ -151,7 +163,7 @@ class ServerController extends Controller
      */
     public function command(Request $request, Server $server): JsonResponse
     {
-        $this->authorizeServer($request, $server);
+        $this->authorizeServer($request, $server, 'console');
         $data = $request->validate(['command' => ['required', 'string', 'max:2000']]);
 
         $ok = $this->wings->command($server->load('node'), $data['command']);
@@ -165,7 +177,7 @@ class ServerController extends Controller
      */
     public function websocket(Request $request, Server $server): JsonResponse
     {
-        $this->authorizeServer($request, $server);
+        $this->authorizeServer($request, $server, 'console');
 
         return response()->json($this->wings->websocket($server->load('node')));
     }
@@ -175,7 +187,7 @@ class ServerController extends Controller
      */
     public function stats(Request $request, Server $server): JsonResponse
     {
-        $this->authorizeServer($request, $server);
+        $this->authorizeServer($request, $server, 'console');
 
         return response()->json($this->wings->stats($server->load('node')) ?? ['state' => 'unreachable']);
     }
@@ -185,7 +197,7 @@ class ServerController extends Controller
      */
     public function logs(Request $request, Server $server): JsonResponse
     {
-        $this->authorizeServer($request, $server);
+        $this->authorizeServer($request, $server, 'console');
 
         return response()->json(['logs' => $this->wings->logs($server->load('node'))]);
     }
@@ -195,7 +207,7 @@ class ServerController extends Controller
      */
     public function files(Request $request, Server $server): JsonResponse
     {
-        $this->authorizeServer($request, $server);
+        $this->authorizeServer($request, $server, 'files');
         $path = (string) $request->query('path', '/');
 
         return response()->json(['path' => $path, 'entries' => $this->wings->files($server->load('node'), $path)]);
@@ -206,7 +218,7 @@ class ServerController extends Controller
      */
     public function fileRead(Request $request, Server $server): JsonResponse
     {
-        $this->authorizeServer($request, $server);
+        $this->authorizeServer($request, $server, 'files');
         $path = (string) $request->query('path', '');
 
         return response()->json(['path' => $path, 'contents' => $this->wings->fileContents($server->load('node'), $path)]);
@@ -217,7 +229,7 @@ class ServerController extends Controller
      */
     public function fileWrite(Request $request, Server $server): JsonResponse
     {
-        $this->authorizeServer($request, $server);
+        $this->authorizeServer($request, $server, 'files');
         $data = $request->validate([
             'path' => ['required', 'string'],
             'contents' => ['nullable', 'string'],
@@ -233,7 +245,7 @@ class ServerController extends Controller
      */
     public function fileDelete(Request $request, Server $server): JsonResponse
     {
-        $this->authorizeServer($request, $server);
+        $this->authorizeServer($request, $server, 'files');
         $data = $request->validate([
             'paths' => ['required', 'array', 'min:1'],
             'paths.*' => ['required', 'string'],
@@ -245,9 +257,71 @@ class ServerController extends Controller
     }
 
     /**
-     * Owners may manage their own servers; admins may manage any.
+     * Grant (or update) a subuser's access to the server.
      */
-    private function authorizeServer(Request $request, Server $server): void
+    public function storeSubuser(Request $request, Server $server): RedirectResponse
+    {
+        $this->authorizeManage($request, $server);
+
+        $data = $request->validate([
+            'email' => ['required', 'email', 'exists:users,email'],
+            'permissions' => ['nullable', 'array'],
+            'permissions.*' => [Rule::in(array_keys(Server::SUBUSER_PERMISSIONS))],
+        ]);
+
+        $user = User::where('email', $data['email'])->firstOrFail();
+
+        if ($user->id === $server->owner_id) {
+            return back()->with('error', __('The owner already has full access.'));
+        }
+
+        $permissions = array_values($data['permissions'] ?? []);
+        $server->subusers()->syncWithoutDetaching([$user->id]);
+        $server->subusers()->updateExistingPivot($user->id, ['permissions' => $permissions]);
+
+        $user->notify(new PanelNotification(
+            __('Server access granted'),
+            __('You were given access to ":name".', ['name' => $server->name]),
+            route('servers.show', $server),
+        ));
+
+        return back()->with('status', __('Subuser saved.'));
+    }
+
+    /**
+     * Remove a subuser's access.
+     */
+    public function destroySubuser(Request $request, Server $server, User $user): RedirectResponse
+    {
+        $this->authorizeManage($request, $server);
+
+        $server->subusers()->detach($user->id);
+
+        return back()->with('status', __('Subuser removed.'));
+    }
+
+    /**
+     * Authorize access to a server. Owners and admins may do anything; subusers
+     * need to be granted the specific permission (null = any subuser access).
+     */
+    private function authorizeServer(Request $request, Server $server, ?string $permission = null): void
+    {
+        $user = $request->user();
+
+        if ($user->isAdmin() || $server->owner_id === $user->id) {
+            return;
+        }
+
+        $permissions = $server->subuserPermissions($user);
+
+        abort_if($permissions === null, 403);
+        abort_if($permission !== null && ! in_array($permission, $permissions, true), 403);
+    }
+
+    /**
+     * Only the owner or an admin may manage a server's subusers.
+     */
+    private function authorizeManage(Request $request, Server $server): void
     {
         $user = $request->user();
 

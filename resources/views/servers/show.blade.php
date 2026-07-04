@@ -61,18 +61,22 @@
                     · RAM <span class="font-medium text-gray-800 dark:text-gray-200" x-text="Math.round(stats.memory_mb ?? 0) + ' / ' + Math.round(stats.memory_limit_mb ?? {{ $server->memory_mb }}) + ' MB'"></span>
                 </div>
                 <div class="ms-auto flex items-center gap-2">
+                    @if (in_array('power', $permissions))
                     <button @click="power('start')" :disabled="!canStart"
                             class="px-3 py-1.5 rounded-md text-sm font-medium bg-green-600 text-white hover:bg-green-700 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-green-600">{{ __('Start') }}</button>
                     <button @click="power('restart')" :disabled="!canRestart"
                             class="px-3 py-1.5 rounded-md text-sm font-medium bg-amber-500 text-white hover:bg-amber-600 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-amber-500">{{ __('Restart') }}</button>
                     <button @click="power('stop')" :disabled="!canStop"
                             class="px-3 py-1.5 rounded-md text-sm font-medium bg-red-600 text-white hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-red-600">{{ __('Stop') }}</button>
+                    @endif
                 </div>
             </div>
 
             {{-- Tabs --}}
             <nav class="inline-flex items-center gap-1 rounded-xl bg-gray-100 dark:bg-gray-800/80 p-1.5 ring-1 ring-gray-200 dark:ring-gray-700">
-                @foreach (['console' => __('Console'), 'files' => __('Files'), 'startup' => __('Startup'), 'settings' => __('Settings')] as $key => $label)
+                @php $tabLabels = ['console' => __('Console'), 'files' => __('Files'), 'startup' => __('Startup'), 'settings' => __('Settings')]; @endphp
+                @foreach ($tabs as $key)
+                    @php $label = $tabLabels[$key]; @endphp
                     <button type="button" @click="tab = '{{ $key }}'"
                             :class="tab === '{{ $key }}' ? 'bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-300 shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'"
                             class="rounded-lg px-4 py-2 text-sm font-semibold">{{ $label }}</button>
@@ -291,16 +295,73 @@
                     </dl>
                 </div>
 
+                {{-- Subusers (owner/admin only) --}}
+                @if ($manages)
+                    <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6">
+                        <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100">{{ __('Subusers') }}</h3>
+                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ __('Give other users access to this server with specific permissions.') }}</p>
+
+                        @if ($server->subusers->isNotEmpty())
+                            <ul class="mt-4 divide-y divide-gray-100 dark:divide-gray-700">
+                                @foreach ($server->subusers as $sub)
+                                    <li class="py-3 flex items-start justify-between gap-4">
+                                        <div class="min-w-0">
+                                            <p class="text-sm font-medium text-gray-800 dark:text-gray-100">{{ $sub->name }} <span class="text-gray-400 font-normal">· {{ $sub->email }}</span></p>
+                                            <div class="mt-1 flex flex-wrap gap-1">
+                                                @foreach (($sub->pivot->permissions ?? []) as $perm)
+                                                    <span class="inline-flex px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300 font-mono">{{ $perm }}</span>
+                                                @endforeach
+                                                @if (empty($sub->pivot->permissions))
+                                                    <span class="text-xs text-gray-400">{{ __('no permissions') }}</span>
+                                                @endif
+                                            </div>
+                                        </div>
+                                        <form method="POST" action="{{ route('servers.subusers.destroy', [$server, $sub]) }}"
+                                              data-confirm="Remove this subuser's access?" data-confirm-button="Remove">
+                                            @csrf @method('DELETE')
+                                            <button class="text-sm text-red-600 hover:underline shrink-0">{{ __('Remove') }}</button>
+                                        </form>
+                                    </li>
+                                @endforeach
+                            </ul>
+                        @endif
+
+                        <form method="POST" action="{{ route('servers.subusers.store', $server) }}" class="mt-5 space-y-4 border-t border-gray-100 dark:border-gray-700 pt-5">
+                            @csrf
+                            <div>
+                                <x-input-label for="sub_email" :value="__('Add user by email')" />
+                                <x-text-input id="sub_email" name="email" type="email" class="mt-1 block w-full" placeholder="user@example.com" required />
+                                <x-input-error :messages="$errors->get('email')" class="mt-2" />
+                            </div>
+                            <div>
+                                <x-input-label :value="__('Permissions')" />
+                                <div class="mt-2 grid gap-2 sm:grid-cols-2">
+                                    @foreach (\App\Models\Server::SUBUSER_PERMISSIONS as $key => $label)
+                                        <label class="flex items-center gap-2">
+                                            <input type="checkbox" name="permissions[]" value="{{ $key }}"
+                                                   class="rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-indigo-600 dark:checked:bg-indigo-500 focus:ring-indigo-500">
+                                            <span class="text-sm text-gray-700 dark:text-gray-300">{{ __($label) }}</span>
+                                        </label>
+                                    @endforeach
+                                </div>
+                            </div>
+                            <x-primary-button>{{ __('Add subuser') }}</x-primary-button>
+                        </form>
+                    </div>
+                @endif
+
                 {{-- Reinstall --}}
-                <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6 border border-red-200 dark:border-red-900/50">
-                    <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100">{{ __('Reinstall server') }}</h3>
-                    <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">{{ __('Re-runs the egg install script (image pull + setup). Your files are kept. Progress is shown live in the console.') }}</p>
-                    <form method="POST" action="{{ route('servers.install', $server) }}" class="mt-4"
-                          data-confirm="Reinstall the container? Your files are kept, but the install script will run again." data-confirm-button="Reinstall" data-confirm-icon="warning">
-                        @csrf
-                        <x-danger-button type="submit" x-bind:disabled="stats.state === 'unreachable'">{{ __('Reinstall') }}</x-danger-button>
-                    </form>
-                </div>
+                @if (in_array('reinstall', $permissions))
+                    <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6 border border-red-200 dark:border-red-900/50">
+                        <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100">{{ __('Reinstall server') }}</h3>
+                        <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">{{ __('Re-runs the egg install script (image pull + setup). Your files are kept. Progress is shown live in the console.') }}</p>
+                        <form method="POST" action="{{ route('servers.install', $server) }}" class="mt-4"
+                              data-confirm="Reinstall the container? Your files are kept, but the install script will run again." data-confirm-button="Reinstall" data-confirm-icon="warning">
+                            @csrf
+                            <x-danger-button type="submit" x-bind:disabled="stats.state === 'unreachable'">{{ __('Reinstall') }}</x-danger-button>
+                        </form>
+                    </div>
+                @endif
             </div>
 
             <a href="{{ route('servers.index') }}" class="inline-block text-sm text-gray-600 dark:text-gray-400 hover:underline">&larr; {{ __('Back to servers') }}</a>
