@@ -78,11 +78,18 @@ class PluginManager
     public static function all(): array
     {
         $enabled = self::enabledIds();
+        $latest = self::latestVersions();
 
-        return array_values(array_map(
-            fn (array $p) => $p + ['enabled' => in_array($p['id'], $enabled, true)],
-            self::discover(),
-        ));
+        return array_values(array_map(function (array $p) use ($enabled, $latest) {
+            $latestVersion = $latest[$p['id']] ?? '';
+
+            return $p + [
+                'enabled' => in_array($p['id'], $enabled, true),
+                'latest_version' => $latestVersion,
+                'update_available' => $latestVersion !== '' && $p['version'] !== ''
+                    && version_compare($latestVersion, $p['version'], '>'),
+            ];
+        }, self::discover()));
     }
 
     /**
@@ -98,15 +105,12 @@ class PluginManager
     }
 
     /**
-     * Plugins available in the plugins repository (from its registry.json),
-     * excluding those already installed. Cached briefly.
+     * The plugins repository catalogue (from its registry.json). Cached briefly.
      *
      * @return array<int, array<string, mixed>>
      */
-    public static function available(): array
+    public static function registry(): array
     {
-        $installed = array_keys(self::discover());
-
         try {
             $registry = cache()->remember('plugins.registry', now()->addMinutes(10), function () {
                 $url = sprintf(
@@ -121,8 +125,38 @@ class PluginManager
             return [];
         }
 
+        return is_array($registry) ? $registry : [];
+    }
+
+    /**
+     * Latest published version per plugin id, from the registry.
+     *
+     * @return array<string, string>
+     */
+    public static function latestVersions(): array
+    {
+        $versions = [];
+        foreach (self::registry() as $p) {
+            if (is_array($p) && ! empty($p['id'])) {
+                $versions[(string) $p['id']] = (string) ($p['version'] ?? '');
+            }
+        }
+
+        return $versions;
+    }
+
+    /**
+     * Plugins available in the plugins repository, excluding those already
+     * installed.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public static function available(): array
+    {
+        $installed = array_keys(self::discover());
+
         return array_values(array_filter(
-            is_array($registry) ? $registry : [],
+            self::registry(),
             fn ($p) => is_array($p) && ! empty($p['id']) && ! in_array($p['id'], $installed, true),
         ));
     }
@@ -209,6 +243,30 @@ class PluginManager
      */
     public static function install(string $id): bool
     {
+        return self::download($id);
+    }
+
+    /**
+     * Re-download an installed plugin, replacing its files with the latest from
+     * the repository. Stored settings (kept in the database) are preserved.
+     */
+    public static function update(string $id): bool
+    {
+        if (! array_key_exists($id, self::discover())) {
+            Log::warning("Plugin update: '{$id}' is not installed.");
+
+            return false;
+        }
+
+        return self::download($id);
+    }
+
+    /**
+     * Fetch a plugin's folder from the repository tarball and write it into
+     * plugins/, replacing any existing copy.
+     */
+    protected static function download(string $id): bool
+    {
         $branch = config('yuno.plugins_branch');
         $repo = config('yuno.plugins_repository');
         $tmp = storage_path('app/plugin-install-'.Str::random(8));
@@ -238,13 +296,15 @@ class PluginManager
                 return false;
             }
 
-            $dest = self::path().'/'.$id;
             if (! is_writable(self::path())) {
                 Log::warning('Plugin install: the plugins/ directory is not writable by the web server.');
 
                 return false;
             }
 
+            // Replace any existing copy so removed files don't linger on update.
+            $dest = self::path().'/'.$id;
+            File::deleteDirectory($dest);
             File::copyDirectory($source, $dest);
 
             return true;

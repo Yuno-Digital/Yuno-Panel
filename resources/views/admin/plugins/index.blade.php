@@ -67,6 +67,9 @@
                             @else
                                 <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300">{{ __('Disabled') }}</span>
                             @endif
+                            @if (! empty($plugin['update_available']))
+                                <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300">{{ __('Update') }} → v{{ $plugin['latest_version'] }}</span>
+                            @endif
                         </div>
                         @if ($plugin['description'])
                             <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ $plugin['description'] }}</p>
@@ -76,6 +79,13 @@
                         </p>
                     </div>
                     <div class="shrink-0 flex items-center gap-2">
+                        @if (! empty($plugin['update_available']))
+                            <form method="POST" action="{{ route('admin.plugins.update', $plugin['id']) }}"
+                                  data-confirm="Update {{ $plugin['name'] }} to v{{ $plugin['latest_version'] }}?" data-confirm-button="Update" data-confirm-icon="question">
+                                @csrf
+                                <x-primary-button type="submit">{{ __('Update to') }} v{{ $plugin['latest_version'] }}</x-primary-button>
+                            </form>
+                        @endif
                         @if (! empty($plugin['settings']) || ! empty($plugin['info']))
                             <a href="{{ route('admin.plugins.settings', $plugin['id']) }}">
                                 <x-secondary-button type="button">{{ __('Settings') }}</x-secondary-button>
