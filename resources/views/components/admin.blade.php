@@ -15,6 +15,7 @@
         'System' => [
             ['route' => 'admin.settings.index', 'pattern' => 'admin.settings.*', 'label' => 'Settings'],
             ['route' => 'admin.webhooks.index', 'pattern' => 'admin.webhooks.*', 'label' => 'Webhooks'],
+            ['route' => 'admin.plugins.index', 'pattern' => 'admin.plugins.*', 'label' => 'Plugins'],
         ],
         'API' => [
             ['route' => 'admin.api.application.index', 'pattern' => 'admin.api.application.*', 'label' => 'Application Keys'],

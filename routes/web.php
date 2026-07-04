@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\EggController;
 use App\Http\Controllers\Admin\EggImportController;
 use App\Http\Controllers\Admin\EggVariableController;
 use App\Http\Controllers\Admin\NodeController as AdminNodeController;
+use App\Http\Controllers\Admin\PluginController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\ServerController as AdminServerController;
 use App\Http\Controllers\Admin\SettingController;
@@ -95,6 +96,9 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::post('eggs/{egg}/variables', [EggVariableController::class, 'store'])->name('eggs.variables.store');
     Route::put('eggs/{egg}/variables/{variable}', [EggVariableController::class, 'update'])->name('eggs.variables.update');
     Route::delete('eggs/{egg}/variables/{variable}', [EggVariableController::class, 'destroy'])->name('eggs.variables.destroy');
+
+    Route::get('plugins', [PluginController::class, 'index'])->name('plugins.index');
+    Route::post('plugins/{plugin}/toggle', [PluginController::class, 'toggle'])->name('plugins.toggle');
 
     Route::get('settings', [SettingController::class, 'index'])->name('settings.index');
     Route::put('settings', [SettingController::class, 'update'])->name('settings.update');
