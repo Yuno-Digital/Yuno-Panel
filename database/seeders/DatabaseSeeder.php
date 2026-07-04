@@ -28,13 +28,16 @@ class DatabaseSeeder extends Seeder
                 'name' => 'Admin',
                 'password' => Hash::make('password'),
                 'is_admin' => true,
+                'is_root' => true,
                 'role_id' => $admin->id,
             ],
         );
 
-        // Ensure the admin account always carries the Admin role.
-        if ($user->role_id !== $admin->id) {
-            $user->update(['role_id' => $admin->id]);
-        }
+        // Ensure the admin account carries the Admin role and, if no main admin
+        // exists yet, mark it as the protected main admin.
+        $user->update([
+            'role_id' => $admin->id,
+            'is_root' => $user->is_root || ! User::where('is_root', true)->exists(),
+        ]);
     }
 }
