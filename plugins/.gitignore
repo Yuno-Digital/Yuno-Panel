@@ -1,0 +1,4 @@
+# Installed plugins live here but are not part of the panel repo.
+*
+!.gitignore
+!README.md
