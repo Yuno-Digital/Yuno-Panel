@@ -55,9 +55,28 @@
         </div>
 
         @if ($update['available'] && $update['changelog'])
+            @php
+                $repo = config('yuno.repository');
+                $linkClass = 'text-indigo-600 dark:text-indigo-400 hover:underline';
+                $changelogHtml = e($update['changelog']);
+                // Linkify bare URLs first (before any anchors exist in the string).
+                $changelogHtml = preg_replace(
+                    '#(https?://[^\s<]+)#',
+                    '<a href="$1" target="_blank" rel="noopener" class="'.$linkClass.'">$1</a>',
+                    $changelogHtml,
+                );
+                // Then linkify #123 PR/issue references (not preceded by a word char, / or #).
+                if ($repo) {
+                    $changelogHtml = preg_replace(
+                        '/(?<![\w\/#])#(\d+)/',
+                        '<a href="https://github.com/'.$repo.'/pull/$1" target="_blank" rel="noopener" class="'.$linkClass.'">#$1</a>',
+                        $changelogHtml,
+                    );
+                }
+            @endphp
             <div class="mt-5 border-t border-gray-200 dark:border-gray-700 pt-4">
                 <h4 class="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2">{{ __('Changelog') }} (v{{ $update['latest'] }})</h4>
-                <pre class="max-h-72 overflow-auto whitespace-pre-wrap rounded-md bg-gray-50 dark:bg-gray-900/60 border border-gray-200 dark:border-gray-700 p-4 text-xs leading-relaxed text-gray-700 dark:text-gray-300 font-mono">{{ $update['changelog'] }}</pre>
+                <pre class="max-h-72 overflow-auto whitespace-pre-wrap rounded-md bg-gray-50 dark:bg-gray-900/60 border border-gray-200 dark:border-gray-700 p-4 text-xs leading-relaxed text-gray-700 dark:text-gray-300 font-mono">{!! $changelogHtml !!}</pre>
             </div>
         @endif
 
