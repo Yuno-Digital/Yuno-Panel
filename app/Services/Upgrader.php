@@ -46,10 +46,25 @@ class Upgrader
             }
         };
 
+        // Run as the web user (e.g. www-data), whose HOME is often unwritable
+        // (/var/www) or littered with root-owned caches from earlier sudo runs.
+        // Point HOME and the package-manager caches at a dir we own (storage/)
+        // so composer/npm don't try to write to /var/www/.npm or /var/www/.cache.
+        $home = storage_path('framework/upgrade');
+        if (! is_dir($home)) {
+            @mkdir($home, 0775, true);
+        }
+        $env = [
+            'HOME' => $home,
+            'COMPOSER_HOME' => $home.'/composer',
+            'COMPOSER_CACHE_DIR' => $home.'/composer/cache',
+            'npm_config_cache' => $home.'/npm-cache',
+        ];
+
         foreach ($this->steps() as $step) {
             $emit('$ '.implode(' ', $step['cmd']));
 
-            $process = new Process($step['cmd'], base_path());
+            $process = new Process($step['cmd'], base_path(), $env);
             $process->setTimeout(600);
 
             try {
