@@ -24,7 +24,7 @@ class Upgrader
             ['label' => 'Pull updates', 'cmd' => ['git', 'pull', '--ff-only']],
             ['label' => 'Install PHP dependencies', 'cmd' => ['composer', 'install', '--no-interaction', '--no-dev', '--prefer-dist', '--optimize-autoloader']],
             ['label' => 'Run migrations', 'cmd' => ['php', 'artisan', 'migrate', '--force']],
-            ['label' => 'Install JS dependencies', 'cmd' => ['npm', 'ci']],
+            ['label' => 'Install JS dependencies', 'cmd' => ['npm', 'ci', '--include=dev']],
             ['label' => 'Build assets', 'cmd' => ['npm', 'run', 'build']],
             ['label' => 'Clear caches', 'cmd' => ['php', 'artisan', 'optimize:clear']],
         ];
