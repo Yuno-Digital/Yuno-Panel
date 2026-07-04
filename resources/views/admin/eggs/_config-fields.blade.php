@@ -39,6 +39,28 @@
         <textarea id="description" name="description" rows="2" class="{{ $ta }}">{{ old('description', $egg->description) }}</textarea>
     </div>
 
+    {{-- Icon: a URL or an uploaded image stored as a data:image value --}}
+    <div x-data="{ icon: {{ Illuminate\Support\Js::from(old('icon', $egg->icon)) }} }">
+        <x-input-label :value="__('Icon')" />
+        <p class="mt-1 mb-2 text-xs text-gray-500 dark:text-gray-400">{{ __('Optional. A URL, or upload a small image (stored inline as data:image, max ~256 KB).') }}</p>
+        <div class="flex items-start gap-4">
+            <div class="w-16 h-16 shrink-0 rounded-md border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-900 flex items-center justify-center overflow-hidden">
+                <template x-if="icon"><img :src="icon" alt="" class="w-full h-full object-contain"></template>
+                <template x-if="!icon"><span class="text-xs text-gray-400">—</span></template>
+            </div>
+            <div class="flex-1 space-y-2">
+                <input type="text" name="icon" x-model="icon" placeholder="https://…  {{ __('or') }}  data:image/…" class="{{ $row }} w-full font-mono">
+                <div class="flex items-center gap-3">
+                    <input type="file" accept="image/*"
+                           @change="const f = $event.target.files[0]; if (f) { const r = new FileReader(); r.onload = () => icon = r.result; r.readAsDataURL(f); }"
+                           class="text-xs text-gray-600 dark:text-gray-400 file:mr-2 file:rounded-md file:border-0 file:bg-gray-200 dark:file:bg-gray-700 file:px-3 file:py-1 file:text-gray-700 dark:file:text-gray-200">
+                    <button type="button" x-show="icon" @click="icon = ''" class="text-xs font-medium text-red-600 hover:underline">{{ __('Remove') }}</button>
+                </div>
+            </div>
+        </div>
+        <x-input-error :messages="$errors->get('icon')" class="mt-2" />
+    </div>
+
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
         <div>
             <x-input-label for="tags" :value="__('Tags')" />

@@ -67,6 +67,14 @@ class EggController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'author' => ['nullable', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
+            'icon' => [
+                'nullable', 'string', 'max:262144', // ~256 KB, enough for a small data:image
+                function (string $attribute, mixed $value, \Closure $fail) {
+                    if ($value && ! preg_match('#^(https?://|data:image/)#i', (string) $value)) {
+                        $fail(__('The icon must be a URL or a data:image value.'));
+                    }
+                },
+            ],
             'tags' => ['nullable', 'string'],
             'features' => ['nullable', 'string'],
             'docker_image_names' => ['required', 'array', 'min:1'],
@@ -104,6 +112,7 @@ class EggController extends Controller
             'name' => $data['name'],
             'author' => $data['author'] ?? null,
             'description' => $data['description'] ?? null,
+            'icon' => $data['icon'] ?? null,
             'tags' => $this->parseList($data['tags'] ?? ''),
             'features' => $this->parseList($data['features'] ?? ''),
             'docker_images' => $images,
