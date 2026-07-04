@@ -5,7 +5,9 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 #[Fillable([
@@ -15,11 +17,62 @@ use Illuminate\Support\Str;
 class Server extends Model
 {
     /**
+     * Permissions a subuser can be granted on a server, as key => human label.
+     *
+     * @var array<string, string>
+     */
+    public const SUBUSER_PERMISSIONS = [
+        'console' => 'View console & send commands',
+        'power' => 'Start / stop / restart',
+        'files' => 'Manage files',
+        'startup' => 'Edit startup & variables',
+        'reinstall' => 'Reinstall the server',
+    ];
+
+    /**
      * The icon to show for this server: its own, or the egg's as a fallback.
      */
     public function displayIcon(): ?string
     {
         return $this->icon ?: $this->egg?->icon;
+    }
+
+    /**
+     * Users granted access to this server (with their permissions on the pivot).
+     *
+     * @return BelongsToMany<User, $this>
+     */
+    public function subusers(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'server_subusers')
+            ->using(ServerSubuser::class)
+            ->withPivot('permissions')
+            ->withTimestamps();
+    }
+
+    /**
+     * The subuser permissions for a user, or null if they are not a subuser.
+     *
+     * @return array<int, string>|null
+     */
+    public function subuserPermissions(User $user): ?array
+    {
+        $row = DB::table('server_subusers')
+            ->where('server_id', $this->id)
+            ->where('user_id', $user->id)
+            ->value('permissions');
+
+        return $row === null ? null : (json_decode((string) $row, true) ?: []);
+    }
+
+    /**
+     * Whether the user may access this server at all (owner, admin or subuser).
+     */
+    public function accessibleBy(User $user): bool
+    {
+        return $user->isAdmin()
+            || $this->owner_id === $user->id
+            || $this->subuserPermissions($user) !== null;
     }
 
     protected function casts(): array
