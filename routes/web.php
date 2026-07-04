@@ -15,6 +15,7 @@ use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\ClientApiKeyController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\NodeConfigController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ServerController;
 use App\Http\Controllers\TwoFactorChallengeController;
@@ -46,6 +47,9 @@ Route::middleware('auth')->group(function () {
     // Deep-linkable UI tab, e.g. /servers/5/startup — resolves to the show page.
     Route::get('/servers/{server}/{tab}', [ServerController::class, 'show'])
         ->whereIn('tab', ['console', 'files', 'startup', 'settings'])->name('servers.show.tab');
+
+    Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::post('/notifications/read', [NotificationController::class, 'markRead'])->name('notifications.read');
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');

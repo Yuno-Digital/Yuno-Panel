@@ -8,6 +8,7 @@ use App\Models\Egg;
 use App\Models\Node;
 use App\Models\Server;
 use App\Models\User;
+use App\Notifications\PanelNotification;
 use App\Services\WingsClient;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -54,6 +55,13 @@ class ServerController extends Controller
         $installed = $this->wings->createContainer(
             $server->load(['node', 'egg', 'allocation', 'variables.eggVariable'])
         );
+
+        // Notify the owner that their server was created.
+        $server->owner?->notify(new PanelNotification(
+            __('Server created'),
+            __('Your server ":name" was created.', ['name' => $server->name]),
+            route('servers.show', $server),
+        ));
 
         return redirect()->route('admin.servers.edit', $server)->with(
             'status',

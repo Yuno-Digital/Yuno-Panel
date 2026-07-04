@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Server;
+use App\Notifications\PanelNotification;
 use App\Services\WingsClient;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -105,6 +106,14 @@ class ServerController extends Controller
         $server->load(['node', 'egg', 'allocation', 'variables.eggVariable']);
 
         $ok = $this->wings->createContainer($server);
+
+        if ($ok) {
+            $server->owner?->notify(new PanelNotification(
+                __('Installation started'),
+                __('":name" is being (re)installed.', ['name' => $server->name]),
+                route('servers.show', $server),
+            ));
+        }
 
         return back()->with($ok ? 'status' : 'error',
             $ok
