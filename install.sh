@@ -225,9 +225,11 @@ if grep -q '^DB_CONNECTION=sqlite' .env || ! grep -q '^DB_CONNECTION=' .env; the
 fi
 
 log "Setting writable permissions"
-chmod -R ug+rw storage bootstrap/cache
-if command -v id >/dev/null 2>&1 && getent passwd www-data >/dev/null 2>&1; then
-    $SUDO chown -R www-data:www-data storage bootstrap/cache 2>/dev/null || true
+# storage + bootstrap/cache always; database/ too (SQLite needs to write the file
+# AND its directory for journal/WAL files) — the web server runs as www-data.
+chmod -R ug+rw storage bootstrap/cache database
+if getent passwd www-data >/dev/null 2>&1; then
+    $SUDO chown -R www-data:www-data storage bootstrap/cache database 2>/dev/null || true
 fi
 
 php artisan storage:link >/dev/null 2>&1 || true
