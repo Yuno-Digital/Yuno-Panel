@@ -14,6 +14,7 @@
                             <th class="px-6 py-3">{{ __('Email') }}</th>
                             <th class="px-6 py-3">{{ __('Role') }}</th>
                             <th class="px-6 py-3">{{ __('Servers') }}</th>
+                            <th class="px-6 py-3">{{ __('Subusers') }}</th>
                             <th class="px-6 py-3 text-right">{{ __('Actions') }}</th>
                         </tr>
                     </thead>
@@ -36,6 +37,7 @@
                                     </div>
                                 </td>
                                 <td class="px-6 py-4">{{ $user->servers_count }}</td>
+                                <td class="px-6 py-4">{{ $user->server_subusers_count }}</td>
                                 <td class="px-6 py-4">
                                     @php $canManage = ! $user->is_root || $user->is(auth()->user()); @endphp
                                     <div class="flex justify-end gap-2">

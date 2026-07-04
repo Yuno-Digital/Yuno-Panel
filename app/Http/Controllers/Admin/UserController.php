@@ -15,7 +15,7 @@ class UserController extends Controller
 {
     public function index(): View
     {
-        $users = User::with('role')->withCount('servers')->latest()->paginate(15);
+        $users = User::with('role')->withCount(['servers', 'serverSubusers'])->latest()->paginate(15);
 
         return view('admin.users.index', compact('users'));
     }
