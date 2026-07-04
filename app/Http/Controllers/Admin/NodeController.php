@@ -105,6 +105,7 @@ class NodeController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'fqdn' => ['required', 'string', 'max:255'],
             'daemon_port' => ['required', 'integer', 'min:1', 'max:65535'],
+            'daemon_tls' => ['sometimes', 'boolean'],
             'description' => ['nullable', 'string'],
         ]);
     }
