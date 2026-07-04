@@ -57,7 +57,10 @@ Egg-basierter Server-Erstellung, Live-Konsole und Dateimanager.
 ## Schnellinstallation (Debian/Ubuntu)
 
 Installiert Abhängigkeiten (PHP 8.4, Composer, Node), klont das Panel und richtet
-alles ein. Danach die Einrichtung im Browser über `/install` abschließen:
+alles ein. Optional fragt es nach einer **Domain** — prüft, ob sie auf den Server
+zeigt (A/AAAA-Record), richtet **nginx** ein und holt ein **Let's-Encrypt-Zertifikat**
+(passt der DNS nicht, gibt's einen Hinweis und du kannst eine andere Domain
+eingeben). Danach die Einrichtung im Browser über `/install` abschließen:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Yuno-Digital/Yuno-Panel/main/install.sh | bash
