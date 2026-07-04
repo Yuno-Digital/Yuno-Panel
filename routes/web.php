@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\EggController;
 use App\Http\Controllers\Admin\EggImportController;
 use App\Http\Controllers\Admin\EggVariableController;
 use App\Http\Controllers\Admin\NodeController as AdminNodeController;
+use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\ServerController as AdminServerController;
 use App\Http\Controllers\Admin\SettingController;
 use App\Http\Controllers\Admin\UpgradeController;
@@ -75,6 +76,7 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::resource('nodes', AdminNodeController::class)->except('show');
     Route::resource('servers', AdminServerController::class)->except('show');
     Route::resource('users', AdminUserController::class)->except('show');
+    Route::resource('roles', RoleController::class)->except('show');
     Route::post('eggs/import', [EggImportController::class, 'store'])->name('eggs.import');
     Route::resource('eggs', EggController::class)->except('show');
     Route::post('eggs/{egg}/variables', [EggVariableController::class, 'store'])->name('eggs.variables.store');

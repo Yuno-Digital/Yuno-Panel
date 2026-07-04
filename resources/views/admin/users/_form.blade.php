@@ -21,12 +21,24 @@
         <x-input-error :messages="$errors->get('password')" class="mt-2" />
     </div>
 
+    <div>
+        <x-input-label for="role_id" :value="__('Role')" />
+        <select id="role_id" name="role_id"
+                class="mt-1 block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
+            <option value="">{{ __('— None —') }}</option>
+            @foreach ($roles as $role)
+                <option value="{{ $role->id }}" @selected(old('role_id', $user->role_id) == $role->id)>{{ $role->name }}</option>
+            @endforeach
+        </select>
+        <x-input-error :messages="$errors->get('role_id')" class="mt-2" />
+    </div>
+
     <label class="inline-flex items-center">
         <input type="hidden" name="is_admin" value="0">
         <input type="checkbox" name="is_admin" value="1"
                class="rounded border-gray-300 dark:border-gray-600 text-indigo-600 shadow-sm focus:ring-indigo-500"
                @checked(old('is_admin', $user->is_admin))>
-        <span class="ms-2 text-sm text-gray-600 dark:text-gray-400">{{ __('Administrator') }}</span>
+        <span class="ms-2 text-sm text-gray-600 dark:text-gray-400">{{ __('Administrator (full access)') }}</span>
     </label>
 
     <div class="flex items-center gap-4">

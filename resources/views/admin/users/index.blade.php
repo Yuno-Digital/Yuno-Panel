@@ -23,9 +23,14 @@
                                 <td class="px-6 py-4 font-medium text-gray-900 dark:text-gray-100">{{ $user->name }}</td>
                                 <td class="px-6 py-4">{{ $user->email }}</td>
                                 <td class="px-6 py-4">
-                                    <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold {{ $user->is_admin ? 'bg-indigo-100 text-indigo-800' : 'bg-gray-100 text-gray-700 dark:text-gray-300' }}">
-                                        {{ $user->is_admin ? __('Admin') : __('User') }}
-                                    </span>
+                                    <div class="flex items-center gap-1.5">
+                                        <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold {{ $user->isAdmin() ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-300' : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300' }}">
+                                            {{ $user->isAdmin() ? __('Admin') : __('User') }}
+                                        </span>
+                                        @if ($user->role)
+                                            <span class="text-xs text-gray-500 dark:text-gray-400">{{ $user->role->name }}</span>
+                                        @endif
+                                    </div>
                                 </td>
                                 <td class="px-6 py-4">{{ $user->servers_count }}</td>
                                 <td class="px-6 py-4">
