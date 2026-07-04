@@ -16,17 +16,21 @@ class AdminDashboardController extends Controller
      */
     public function __invoke(UpdateChecker $updates): View
     {
+        $servers = Server::get(['id']);
+
         $stats = [
             'users' => User::count(),
             'admins' => User::where('is_admin', true)->count(),
             'nodes' => Node::count(),
             'nodes_online' => Node::where('is_online', true)->count(),
-            'servers' => Server::count(),
+            'servers' => $servers->count(),
+            // Fallback only; the real running count is computed live in the browser.
             'servers_running' => Server::where('status', 'running')->count(),
         ];
 
         return view('admin.dashboard', [
             'stats' => $stats,
+            'servers' => $servers,
             'update' => $updates->status(),
         ]);
     }
