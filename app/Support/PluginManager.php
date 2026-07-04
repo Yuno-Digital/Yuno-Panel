@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Models\Plugin;
+use App\Models\PluginSetting;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
@@ -43,6 +44,7 @@ class PluginManager
                 'author' => (string) ($meta['author'] ?? ''),
                 'namespace' => $meta['namespace'] ?? null,
                 'provider' => $meta['provider'] ?? null,
+                'settings' => is_array($meta['settings'] ?? null) ? $meta['settings'] : [],
                 'path' => dirname($manifest),
             ];
         }
@@ -121,6 +123,49 @@ class PluginManager
             is_array($registry) ? $registry : [],
             fn ($p) => is_array($p) && ! empty($p['id']) && ! in_array($p['id'], $installed, true),
         ));
+    }
+
+    /**
+     * A single stored setting for a plugin (falls back to $default / env).
+     */
+    public static function setting(string $pluginId, string $key, mixed $default = null): mixed
+    {
+        try {
+            $value = PluginSetting::where('plugin_id', $pluginId)->where('key', $key)->value('value');
+        } catch (Throwable) {
+            $value = null;
+        }
+
+        return $value ?? $default;
+    }
+
+    /**
+     * All stored settings for a plugin as key => value.
+     *
+     * @return array<string, mixed>
+     */
+    public static function settingsFor(string $pluginId): array
+    {
+        try {
+            return PluginSetting::where('plugin_id', $pluginId)->pluck('value', 'key')->all();
+        } catch (Throwable) {
+            return [];
+        }
+    }
+
+    /**
+     * Persist a plugin's settings (key => value).
+     *
+     * @param  array<string, mixed>  $values
+     */
+    public static function saveSettings(string $pluginId, array $values): void
+    {
+        foreach ($values as $key => $value) {
+            PluginSetting::updateOrCreate(
+                ['plugin_id' => $pluginId, 'key' => $key],
+                ['value' => $value === '' ? null : $value],
+            );
+        }
     }
 
     /**

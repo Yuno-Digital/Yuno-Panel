@@ -71,15 +71,22 @@
                             <span class="font-mono">{{ $plugin['id'] }}</span>@if ($plugin['author']) · {{ $plugin['author'] }}@endif
                         </p>
                     </div>
-                    <form method="POST" action="{{ route('admin.plugins.toggle', $plugin['id']) }}" class="shrink-0">
-                        @csrf
-                        <input type="hidden" name="enabled" value="{{ $plugin['enabled'] ? '0' : '1' }}">
-                        @if ($plugin['enabled'])
-                            <x-secondary-button type="submit">{{ __('Disable') }}</x-secondary-button>
-                        @else
-                            <x-primary-button type="submit">{{ __('Enable') }}</x-primary-button>
+                    <div class="shrink-0 flex items-center gap-2">
+                        @if (! empty($plugin['settings']))
+                            <a href="{{ route('admin.plugins.settings', $plugin['id']) }}">
+                                <x-secondary-button type="button">{{ __('Settings') }}</x-secondary-button>
+                            </a>
                         @endif
-                    </form>
+                        <form method="POST" action="{{ route('admin.plugins.toggle', $plugin['id']) }}">
+                            @csrf
+                            <input type="hidden" name="enabled" value="{{ $plugin['enabled'] ? '0' : '1' }}">
+                            @if ($plugin['enabled'])
+                                <x-secondary-button type="submit">{{ __('Disable') }}</x-secondary-button>
+                            @else
+                                <x-primary-button type="submit">{{ __('Enable') }}</x-primary-button>
+                            @endif
+                        </form>
+                    </div>
                 </div>
             @endforeach
         </div>

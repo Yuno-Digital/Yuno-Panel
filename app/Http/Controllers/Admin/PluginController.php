@@ -40,6 +40,40 @@ class PluginController extends Controller
         return redirect()->route('admin.plugins.index')->with('status', __('Plugin installed — enable it below.'));
     }
 
+    /**
+     * Show a plugin's settings form (fields declared in its plugin.json).
+     */
+    public function settings(string $plugin): View|RedirectResponse
+    {
+        $meta = PluginManager::discover()[$plugin] ?? abort(404);
+
+        if (empty($meta['settings'])) {
+            return redirect()->route('admin.plugins.index');
+        }
+
+        return view('admin.plugins.settings', [
+            'plugin' => $meta,
+            'values' => PluginManager::settingsFor($plugin),
+        ]);
+    }
+
+    /**
+     * Save a plugin's settings.
+     */
+    public function updateSettings(Request $request, string $plugin): RedirectResponse
+    {
+        $meta = PluginManager::discover()[$plugin] ?? abort(404);
+
+        $keys = collect($meta['settings'] ?? [])->pluck('key')->filter()->all();
+        $values = collect($request->input('settings', []))
+            ->only($keys)
+            ->all();
+
+        PluginManager::saveSettings($plugin, $values);
+
+        return redirect()->route('admin.plugins.settings', $plugin)->with('status', __('Settings saved.'));
+    }
+
     public function toggle(Request $request, string $plugin): RedirectResponse
     {
         if (! array_key_exists($plugin, PluginManager::discover())) {
