@@ -60,7 +60,7 @@ class Installer
     public static function requirements(): array
     {
         return [
-            ['label' => 'PHP 8.3 or newer ('.PHP_VERSION.')', 'ok' => version_compare(PHP_VERSION, '8.3.0', '>=')],
+            ['label' => 'PHP 8.4 or newer ('.PHP_VERSION.')', 'ok' => version_compare(PHP_VERSION, '8.4.0', '>=')],
             ['label' => 'PDO extension', 'ok' => extension_loaded('pdo')],
             ['label' => 'pdo_sqlite extension', 'ok' => extension_loaded('pdo_sqlite')],
             ['label' => 'mbstring extension', 'ok' => extension_loaded('mbstring')],

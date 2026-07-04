@@ -9,7 +9,7 @@ set -euo pipefail
 
 REPO="https://github.com/Yuno-Digital/Yuno-Panel.git"
 DIR="${1:-/var/www/yuno-panel}"
-PHP="8.3"
+PHP="8.4"
 NODE_MAJOR="22"
 
 log()  { printf '\033[1;36m==>\033[0m %s\n' "$*"; }
@@ -43,6 +43,11 @@ $SUDO apt-get install -y \
     "php${PHP}-sqlite3" "php${PHP}-mysql" "php${PHP}-curl" "php${PHP}-bcmath" \
     "php${PHP}-gd" "php${PHP}-zip" "php${PHP}-intl" || \
     $SUDO apt-get install -y php-cli php-common php-mbstring php-xml php-sqlite3 php-mysql php-curl php-bcmath php-gd php-zip php-intl
+
+# Make php ${PHP} the default `php` (the app's dependencies need >= 8.4).
+if [ -x "/usr/bin/php${PHP}" ]; then
+    $SUDO update-alternatives --set php "/usr/bin/php${PHP}" >/dev/null 2>&1 || true
+fi
 
 # --- Composer ---
 if ! command -v composer >/dev/null 2>&1; then

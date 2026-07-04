@@ -37,7 +37,7 @@ Egg-basierter Server-Erstellung, Live-Konsole und Dateimanager.
 
 ## Tech-Stack
 
-- **PHP 8.3+ / Laravel 13**, Laravel Breeze (Blade) fürs Auth-Scaffolding
+- **PHP 8.4+ / Laravel 13**, Laravel Breeze (Blade) fürs Auth-Scaffolding
 - **Tailwind CSS v3** (`darkMode: 'class'`) + Vite, **Alpine.js**
 - **SweetAlert2** (Dialoge/Toasts), **Monaco Editor** (per CDN, für den Datei-Editor)
 - **SQLite** (Entwicklung) – MySQL/MariaDB für Produktion vorgesehen
@@ -56,7 +56,7 @@ Egg-basierter Server-Erstellung, Live-Konsole und Dateimanager.
 
 ## Schnellinstallation (Debian/Ubuntu)
 
-Installiert Abhängigkeiten (PHP 8.3, Composer, Node), klont das Panel und richtet
+Installiert Abhängigkeiten (PHP 8.4, Composer, Node), klont das Panel und richtet
 alles ein. Danach die Einrichtung im Browser über `/install` abschließen:
 
 ```bash
