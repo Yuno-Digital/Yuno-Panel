@@ -6,7 +6,7 @@ Nodes (Host-Maschinen) und steuert diese über den Node-Daemon
 [Yuno Panel Wings](../Yuno-Panel-Wings) – mit User-Login, Admin-Bereich,
 Egg-basierter Server-Erstellung, Live-Konsole und Dateimanager.
 
-> Aktuelle Version: **0.1.1**
+> Aktuelle Version: **1.0.0-alpha4**
 
 ## Funktionen
 
