@@ -19,7 +19,14 @@
             <tbody class="divide-y divide-gray-200 dark:divide-gray-700 text-sm text-gray-700 dark:text-gray-300">
                 @forelse ($roles as $role)
                     <tr>
-                        <td class="px-6 py-4 font-medium text-gray-900 dark:text-gray-100">{{ $role->name }}</td>
+                        <td class="px-6 py-4 font-medium text-gray-900 dark:text-gray-100">
+                            <div class="flex items-center gap-2">
+                                <span>{{ $role->name }}</span>
+                                @if ($role->is_default)
+                                    <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300">{{ __('Default') }}</span>
+                                @endif
+                            </div>
+                        </td>
                         <td class="px-6 py-4">
                             @if (in_array('administrator', $role->permissions ?? [], true))
                                 <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-300">{{ __('Administrator') }}</span>
@@ -31,11 +38,13 @@
                         <td class="px-6 py-4">
                             <div class="flex justify-end gap-2">
                                 <a href="{{ route('admin.roles.edit', $role) }}" class="text-indigo-600 hover:underline">{{ __('Edit') }}</a>
-                                <form method="POST" action="{{ route('admin.roles.destroy', $role) }}"
-                                      data-confirm="Delete this role? Users keep access but lose this role." data-confirm-button="Delete">
-                                    @csrf @method('DELETE')
-                                    <button class="text-red-600 hover:underline">{{ __('Delete') }}</button>
-                                </form>
+                                @unless ($role->is_default)
+                                    <form method="POST" action="{{ route('admin.roles.destroy', $role) }}"
+                                          data-confirm="Delete this role? Users keep access but lose this role." data-confirm-button="Delete">
+                                        @csrf @method('DELETE')
+                                        <button class="text-red-600 hover:underline">{{ __('Delete') }}</button>
+                                    </form>
+                                @endunless
                             </div>
                         </td>
                     </tr>
