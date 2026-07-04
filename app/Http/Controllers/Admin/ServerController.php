@@ -156,6 +156,14 @@ class ServerController extends Controller
 
         $rules = [
             'name' => ['required', 'string', 'max:255'],
+            'icon' => [
+                'nullable', 'string', 'max:262144',
+                function (string $attribute, mixed $value, \Closure $fail) {
+                    if ($value && ! preg_match('#^(https?://|data:image/)#i', (string) $value)) {
+                        $fail(__('The icon must be a URL or a data:image value.'));
+                    }
+                },
+            ],
             'node_id' => ['required', 'exists:nodes,id'],
             'owner_id' => ['required', 'exists:users,id'],
             'egg_id' => ['required', 'exists:eggs,id'],

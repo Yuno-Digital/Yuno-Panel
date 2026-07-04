@@ -27,7 +27,14 @@
                             @foreach ($servers as $server)
                                 <tr class="text-sm text-gray-700 dark:text-gray-300">
                                     <td class="px-6 py-4 font-medium text-gray-900 dark:text-gray-100">
-                                        <a href="{{ route('servers.show', $server) }}" class="hover:text-indigo-600 hover:underline">{{ $server->name }}</a>
+                                        <a href="{{ route('servers.show', $server) }}" class="flex items-center gap-3 hover:text-indigo-600">
+                                            @if ($server->displayIcon())
+                                                <img src="{{ $server->displayIcon() }}" alt="" class="w-8 h-8 rounded object-contain bg-gray-100 dark:bg-gray-900 shrink-0">
+                                            @else
+                                                <span class="w-8 h-8 rounded bg-gray-100 dark:bg-gray-700 shrink-0 flex items-center justify-center text-gray-400 text-xs">🎮</span>
+                                            @endif
+                                            <span class="hover:underline">{{ $server->name }}</span>
+                                        </a>
                                     </td>
                                     <td class="px-6 py-4" x-data="serverStatus('{{ route('servers.stats', $server) }}')" x-init="start()">
                                         <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-semibold" :class="badge">

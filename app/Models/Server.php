@@ -9,11 +9,19 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 
 #[Fillable([
-    'name', 'node_id', 'allocation_id', 'owner_id', 'egg_id', 'docker_image', 'startup',
+    'name', 'icon', 'node_id', 'allocation_id', 'owner_id', 'egg_id', 'docker_image', 'startup',
     'status', 'memory_mb', 'disk_mb', 'cpu', 'swap_mb', 'port',
 ])]
 class Server extends Model
 {
+    /**
+     * The icon to show for this server: its own, or the egg's as a fallback.
+     */
+    public function displayIcon(): ?string
+    {
+        return $this->icon ?: $this->egg?->icon;
+    }
+
     protected function casts(): array
     {
         return [
