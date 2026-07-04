@@ -54,7 +54,17 @@ Egg-basierter Server-Erstellung, Live-Konsole und Dateimanager.
   Install-Skript, Variablen) im Pelican-Format
 - **ApiKey** – Client- und Application-Keys · **Setting** – Panel-Einstellungen
 
-## Setup
+## Schnellinstallation (Debian/Ubuntu)
+
+Installiert Abhängigkeiten (PHP 8.3, Composer, Node), klont das Panel und richtet
+alles ein. Danach die Einrichtung im Browser über `/install` abschließen:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Yuno-Digital/Yuno-Panel/main/install.sh | bash
+# oder ein Zielverzeichnis angeben:  bash install.sh /var/www/yuno-panel
+```
+
+## Setup (manuell)
 
 ```bash
 composer install
