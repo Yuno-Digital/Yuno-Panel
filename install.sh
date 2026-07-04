@@ -45,9 +45,19 @@ server {
 }
 NGINX
     sed -i "s#__DOMAIN__#${domain}#g; s#__ROOT__#${DIR}/public#g; s#__FPM__#/run/php/php${PHP}-fpm.sock#g" /tmp/yuno-site.conf
-    $SUDO mv /tmp/yuno-site.conf "/etc/nginx/sites-available/${domain}.conf"
-    $SUDO ln -sf "/etc/nginx/sites-available/${domain}.conf" "/etc/nginx/sites-enabled/${domain}.conf"
-    [ -e /etc/nginx/sites-enabled/default ] && $SUDO rm -f /etc/nginx/sites-enabled/default
+
+    # Use conf.d (always included by nginx.conf, on every distro).
+    $SUDO mkdir -p /etc/nginx/conf.d
+    $SUDO mv /tmp/yuno-site.conf "/etc/nginx/conf.d/yuno-${domain}.conf"
+
+    # Remove any leftover site from an earlier run in the sites-* layout.
+    $SUDO rm -f "/etc/nginx/sites-enabled/${domain}.conf" "/etc/nginx/sites-available/${domain}.conf"
+
+    # Drop default sites that would also claim port 80 (ignore if absent).
+    for d in /etc/nginx/sites-enabled/default /etc/nginx/conf.d/default.conf; do
+        if [ -e "$d" ]; then $SUDO rm -f "$d"; fi
+    done
+    return 0
 }
 
 # Interactive nginx + Let's Encrypt setup: ask for a domain, verify DNS, then
