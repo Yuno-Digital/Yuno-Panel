@@ -59,7 +59,12 @@ setup_nginx() {
     fi
 
     log "Installing nginx, PHP-FPM and certbot"
-    $SUDO apt-get install -y nginx "php${PHP}-fpm" certbot python3-certbot-nginx dnsutils
+    $SUDO apt-get install -y nginx "php${PHP}-fpm" certbot python3-certbot-nginx
+    # dig lives in bind9-dnsutils (newer Debian) or dnsutils (older).
+    command -v dig >/dev/null 2>&1 \
+        || $SUDO apt-get install -y bind9-dnsutils 2>/dev/null \
+        || $SUDO apt-get install -y dnsutils 2>/dev/null \
+        || warn "Could not install 'dig' — the DNS check may not work."
 
     SERVER_IP4="$(curl -4 -fsSL --max-time 6 https://api.ipify.org 2>/dev/null || true)"
     SERVER_IP6="$(curl -6 -fsSL --max-time 6 https://api6.ipify.org 2>/dev/null || true)"
@@ -120,15 +125,29 @@ command -v apt-get >/dev/null 2>&1 || die "This installer supports Debian/Ubuntu
 
 log "Installing system dependencies"
 $SUDO apt-get update -y
-$SUDO apt-get install -y ca-certificates curl git unzip gnupg lsb-release software-properties-common
+$SUDO apt-get install -y ca-certificates curl git unzip gnupg lsb-release
+
+# Distro info (ID=ubuntu|debian, codename e.g. noble/bookworm/trixie).
+DISTRO_ID=""; CODENAME=""
+if [ -r /etc/os-release ]; then . /etc/os-release; DISTRO_ID="${ID:-}"; CODENAME="${VERSION_CODENAME:-}"; fi
+[ -n "$CODENAME" ] || CODENAME="$(lsb_release -sc 2>/dev/null || echo '')"
 
 # --- PHP ---
-if ! command -v "php${PHP}" >/dev/null 2>&1 && ! php -v 2>/dev/null | grep -q "PHP ${PHP}"; then
-    if grep -qi ubuntu /etc/os-release; then
+# Add a PHP repo only if php${PHP} isn't already available from apt (Debian 13
+# ships PHP 8.4 already; older Debian uses sury, Ubuntu uses the ondrej PPA).
+if ! apt-cache show "php${PHP}-cli" >/dev/null 2>&1; then
+    if [ "$DISTRO_ID" = "ubuntu" ]; then
         log "Adding ondrej/php PPA"
+        $SUDO apt-get install -y software-properties-common
         $SUDO add-apt-repository -y ppa:ondrej/php
-        $SUDO apt-get update -y
+    else
+        log "Adding packages.sury.org PHP repo (Debian)"
+        $SUDO install -d -m 0755 /etc/apt/keyrings
+        curl -fsSL https://packages.sury.org/php/apt.gpg | $SUDO gpg --dearmor -o /etc/apt/keyrings/sury-php.gpg
+        echo "deb [signed-by=/etc/apt/keyrings/sury-php.gpg] https://packages.sury.org/php/ ${CODENAME} main" \
+            | $SUDO tee /etc/apt/sources.list.d/sury-php.list >/dev/null
     fi
+    $SUDO apt-get update -y
 fi
 log "Installing PHP ${PHP} + extensions"
 $SUDO apt-get install -y \
