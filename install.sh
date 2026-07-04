@@ -7,6 +7,10 @@
 #
 set -euo pipefail
 
+# System binaries (nginx, etc.) live in sbin, which isn't always on the PATH
+# inherited by `curl | bash`.
+export PATH="/usr/local/sbin:/usr/sbin:/sbin:$PATH"
+
 REPO="https://github.com/Yuno-Digital/Yuno-Panel.git"
 DIR="${1:-/var/www/yuno-panel}"
 PHP="8.4"
