@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
@@ -17,6 +18,9 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+        Role::firstOrCreate(['name' => 'Administrator'], ['permissions' => ['administrator']]);
+        Role::firstOrCreate(['name' => 'Support'], ['permissions' => ['servers.manage', 'users.manage']]);
+
         User::firstOrCreate(
             ['email' => 'admin@yuno.local'],
             [

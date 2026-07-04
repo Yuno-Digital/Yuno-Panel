@@ -24,7 +24,7 @@ class ServerController extends Controller
         $user = Auth::user();
 
         $servers = Server::with(['node', 'owner', 'egg', 'allocation'])
-            ->when(! $user->is_admin, fn ($query) => $query->where('owner_id', $user->id))
+            ->when(! $user->isAdmin(), fn ($query) => $query->where('owner_id', $user->id))
             ->latest()
             ->get();
 
@@ -231,6 +231,6 @@ class ServerController extends Controller
     {
         $user = $request->user();
 
-        abort_unless($user->is_admin || $server->owner_id === $user->id, 403);
+        abort_unless($user->isAdmin() || $server->owner_id === $user->id, 403);
     }
 }
