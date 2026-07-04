@@ -3,6 +3,10 @@
 namespace App\Support;
 
 use App\Models\Plugin;
+use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
+use PharData;
 use Throwable;
 
 /**
@@ -87,5 +91,76 @@ class PluginManager
         $enabled = self::enabledIds();
 
         return array_filter(self::discover(), fn (array $p) => in_array($p['id'], $enabled, true));
+    }
+
+    /**
+     * Plugins available in the plugins repository (from its registry.json),
+     * excluding those already installed. Cached briefly.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public static function available(): array
+    {
+        $installed = array_keys(self::discover());
+
+        try {
+            $registry = cache()->remember('plugins.registry', now()->addMinutes(10), function () {
+                $url = sprintf(
+                    'https://raw.githubusercontent.com/%s/%s/registry.json',
+                    config('yuno.plugins_repository'),
+                    config('yuno.plugins_branch'),
+                );
+
+                return Http::timeout(10)->get($url)->json('plugins') ?? [];
+            });
+        } catch (Throwable) {
+            return [];
+        }
+
+        return array_values(array_filter(
+            is_array($registry) ? $registry : [],
+            fn ($p) => is_array($p) && ! empty($p['id']) && ! in_array($p['id'], $installed, true),
+        ));
+    }
+
+    /**
+     * Download and install a plugin by id from the plugins repository. Returns
+     * true on success.
+     */
+    public static function install(string $id): bool
+    {
+        $branch = config('yuno.plugins_branch');
+        $repo = config('yuno.plugins_repository');
+        $tmp = storage_path('app/plugin-install-'.Str::random(8));
+
+        try {
+            File::ensureDirectoryExists($tmp);
+
+            $archive = $tmp.'/repo.tar.gz';
+            $url = sprintf('https://codeload.github.com/%s/tar.gz/refs/heads/%s', $repo, $branch);
+
+            $response = Http::timeout(60)->get($url);
+            if (! $response->successful()) {
+                return false;
+            }
+            File::put($archive, $response->body());
+
+            (new PharData($archive))->extractTo($tmp.'/extracted', null, true);
+
+            // The tarball extracts to "<repo-name>-<branch>/<plugin id>/".
+            $repoName = Str::afterLast($repo, '/');
+            $source = $tmp.'/extracted/'.$repoName.'-'.$branch.'/'.$id;
+            if (! is_dir($source) || ! is_file($source.'/plugin.json')) {
+                return false;
+            }
+
+            File::copyDirectory($source, self::path().'/'.$id);
+
+            return true;
+        } catch (Throwable) {
+            return false;
+        } finally {
+            File::deleteDirectory($tmp);
+        }
     }
 }

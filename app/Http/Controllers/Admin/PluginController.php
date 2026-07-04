@@ -13,7 +13,31 @@ class PluginController extends Controller
 {
     public function index(): View
     {
-        return view('admin.plugins.index', ['plugins' => PluginManager::all()]);
+        return view('admin.plugins.index', [
+            'plugins' => PluginManager::all(),
+            'available' => PluginManager::available(),
+        ]);
+    }
+
+    /**
+     * One-click install a plugin from the plugins repository.
+     */
+    public function install(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'id' => ['required', 'string', 'regex:/^[a-z0-9._-]+$/i'],
+        ]);
+
+        $available = collect(PluginManager::available())->pluck('id')->all();
+        if (! in_array($data['id'], $available, true)) {
+            return redirect()->route('admin.plugins.index')->with('error', __('That plugin is not available.'));
+        }
+
+        if (! PluginManager::install($data['id'])) {
+            return redirect()->route('admin.plugins.index')->with('error', __('Could not install the plugin.'));
+        }
+
+        return redirect()->route('admin.plugins.index')->with('status', __('Plugin installed — enable it below.'));
     }
 
     public function toggle(Request $request, string $plugin): RedirectResponse
