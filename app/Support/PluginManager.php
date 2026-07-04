@@ -6,6 +6,7 @@ use App\Models\Plugin;
 use App\Models\PluginSetting;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use PharData;
 use Throwable;
@@ -220,6 +221,8 @@ class PluginManager
 
             $response = Http::timeout(60)->get($url);
             if (! $response->successful()) {
+                Log::warning("Plugin install: download failed ({$response->status()}) for {$url}");
+
                 return false;
             }
             File::put($archive, $response->body());
@@ -230,13 +233,24 @@ class PluginManager
             $repoName = Str::afterLast($repo, '/');
             $source = $tmp.'/extracted/'.$repoName.'-'.$branch.'/'.$id;
             if (! is_dir($source) || ! is_file($source.'/plugin.json')) {
+                Log::warning("Plugin install: '{$id}' not found in the downloaded archive.");
+
                 return false;
             }
 
-            File::copyDirectory($source, self::path().'/'.$id);
+            $dest = self::path().'/'.$id;
+            if (! is_writable(self::path())) {
+                Log::warning('Plugin install: the plugins/ directory is not writable by the web server.');
+
+                return false;
+            }
+
+            File::copyDirectory($source, $dest);
 
             return true;
-        } catch (Throwable) {
+        } catch (Throwable $e) {
+            Log::warning('Plugin install failed: '.$e->getMessage());
+
             return false;
         } finally {
             File::deleteDirectory($tmp);
