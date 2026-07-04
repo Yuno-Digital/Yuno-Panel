@@ -10,10 +10,11 @@
             <div class="mt-2 text-3xl font-bold text-gray-900 dark:text-gray-100">{{ $stats['nodes'] }}</div>
             <div class="mt-1 text-xs text-green-600">{{ $stats['nodes_online'] }} {{ __('online') }}</div>
         </div>
-        <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6">
+        <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6"
+             x-data="runningCount(@js($servers->map(fn ($s) => route('servers.stats', $s))->values()))" x-init="start()">
             <div class="text-sm text-gray-500 dark:text-gray-400">{{ __('Servers') }}</div>
             <div class="mt-2 text-3xl font-bold text-gray-900 dark:text-gray-100">{{ $stats['servers'] }}</div>
-            <div class="mt-1 text-xs text-green-600">{{ $stats['servers_running'] }} {{ __('running') }}</div>
+            <div class="mt-1 text-xs text-green-600"><span x-text="running">{{ $stats['servers_running'] }}</span> {{ __('running') }}</div>
         </div>
     </div>
 
