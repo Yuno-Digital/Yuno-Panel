@@ -4,9 +4,45 @@
     </div>
 
     <p class="mb-4 text-sm text-gray-500 dark:text-gray-400">
-        {{ __('Drop plugin folders into the panel\'s') }} <code>plugins/</code> {{ __('directory. Get plugins from the') }}
-        <a href="https://github.com/Yuno-Digital/Yuno-Panel-Plugins" target="_blank" rel="noopener" class="text-indigo-600 hover:underline">{{ __('plugins repository') }}</a>.
+        {{ __('Install plugins from the') }}
+        <a href="https://github.com/{{ config('yuno.plugins_repository') }}" target="_blank" rel="noopener" class="text-indigo-600 hover:underline">{{ __('plugins repository') }}</a>
+        {{ __('with one click, or drop folders into the panel\'s') }} <code>plugins/</code> {{ __('directory.') }}
     </p>
+
+    {{-- Available from the repository (one-click install) --}}
+    @if (! empty($available))
+        <div class="mb-6">
+            <h4 class="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-400">{{ __('Available to install') }}</h4>
+            <div class="space-y-3">
+                @foreach ($available as $plugin)
+                    <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-5 flex items-start justify-between gap-4">
+                        <div class="min-w-0">
+                            <div class="flex items-center gap-2">
+                                <span class="font-medium text-gray-900 dark:text-gray-100">{{ $plugin['name'] ?? $plugin['id'] }}</span>
+                                @if (! empty($plugin['version']))
+                                    <span class="text-xs font-mono text-gray-400">v{{ $plugin['version'] }}</span>
+                                @endif
+                            </div>
+                            @if (! empty($plugin['description']))
+                                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ $plugin['description'] }}</p>
+                            @endif
+                            <p class="mt-1 text-xs text-gray-400">
+                                <span class="font-mono">{{ $plugin['id'] }}</span>@if (! empty($plugin['author'])) · {{ $plugin['author'] }}@endif
+                            </p>
+                        </div>
+                        <form method="POST" action="{{ route('admin.plugins.install') }}" class="shrink-0"
+                              data-confirm="Install {{ $plugin['name'] ?? $plugin['id'] }} from the plugins repository?" data-confirm-button="Install" data-confirm-icon="question">
+                            @csrf
+                            <input type="hidden" name="id" value="{{ $plugin['id'] }}">
+                            <x-primary-button type="submit">{{ __('Install') }}</x-primary-button>
+                        </form>
+                    </div>
+                @endforeach
+            </div>
+        </div>
+
+        <h4 class="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-400">{{ __('Installed') }}</h4>
+    @endif
 
     @if (empty($plugins))
         <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6 text-sm text-gray-500 dark:text-gray-400">

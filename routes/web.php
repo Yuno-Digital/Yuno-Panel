@@ -98,6 +98,7 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::delete('eggs/{egg}/variables/{variable}', [EggVariableController::class, 'destroy'])->name('eggs.variables.destroy');
 
     Route::get('plugins', [PluginController::class, 'index'])->name('plugins.index');
+    Route::post('plugins/install', [PluginController::class, 'install'])->name('plugins.install');
     Route::post('plugins/{plugin}/toggle', [PluginController::class, 'toggle'])->name('plugins.toggle');
 
     Route::get('settings', [SettingController::class, 'index'])->name('settings.index');
