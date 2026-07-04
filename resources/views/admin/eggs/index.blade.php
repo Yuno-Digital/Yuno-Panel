@@ -42,7 +42,16 @@
                 <tbody class="divide-y divide-gray-200 dark:divide-gray-700 text-sm text-gray-700 dark:text-gray-300">
                     @foreach ($eggs as $egg)
                         <tr>
-                            <td class="px-6 py-4 font-medium text-gray-900 dark:text-gray-100">{{ $egg->name }}</td>
+                            <td class="px-6 py-4 font-medium text-gray-900 dark:text-gray-100">
+                                <div class="flex items-center gap-3">
+                                    @if ($egg->icon)
+                                        <img src="{{ $egg->icon }}" alt="" class="w-8 h-8 rounded object-contain bg-gray-100 dark:bg-gray-900 shrink-0">
+                                    @else
+                                        <span class="w-8 h-8 rounded bg-gray-100 dark:bg-gray-700 shrink-0 flex items-center justify-center text-gray-400 text-xs">🥚</span>
+                                    @endif
+                                    <span>{{ $egg->name }}</span>
+                                </div>
+                            </td>
                             <td class="px-6 py-4">{{ $egg->author ?? '—' }}</td>
                             <td class="px-6 py-4 font-mono text-xs">{{ $egg->docker_image }}</td>
                             <td class="px-6 py-4">{{ $egg->variables_count }}</td>
