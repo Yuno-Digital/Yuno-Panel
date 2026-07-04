@@ -58,6 +58,28 @@
         </div>
     </div>
 
+    {{-- Icon: a URL or an uploaded image; empty falls back to the egg's icon --}}
+    <div x-data="{ icon: {{ Illuminate\Support\Js::from(old('icon', $server->icon)) }} }">
+        <x-input-label :value="__('Icon')" />
+        <p class="mt-1 mb-2 text-xs text-gray-500 dark:text-gray-400">{{ __('Optional. A URL or an uploaded image (data:image, max ~256 KB). Leave empty to use the egg\'s icon.') }}</p>
+        <div class="flex items-start gap-4">
+            <div class="w-16 h-16 shrink-0 rounded-md border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-900 flex items-center justify-center overflow-hidden">
+                <template x-if="icon"><img :src="icon" alt="" class="w-full h-full object-contain"></template>
+                <template x-if="!icon"><span class="text-xs text-gray-400">—</span></template>
+            </div>
+            <div class="flex-1 space-y-2">
+                <input type="text" name="icon" x-model="icon" placeholder="https://…  {{ __('or') }}  data:image/…" class="{{ $mono }} block w-full">
+                <div class="flex items-center gap-3">
+                    <input type="file" accept="image/*"
+                           @change="const f = $event.target.files[0]; if (f) { const r = new FileReader(); r.onload = () => icon = r.result; r.readAsDataURL(f); }"
+                           class="text-xs text-gray-600 dark:text-gray-400 file:mr-2 file:rounded-md file:border-0 file:bg-gray-200 dark:file:bg-gray-700 file:px-3 file:py-1 file:text-gray-700 dark:file:text-gray-200">
+                    <button type="button" x-show="icon" @click="icon = ''" class="text-xs font-medium text-red-600 hover:underline">{{ __('Remove') }}</button>
+                </div>
+            </div>
+        </div>
+        <x-input-error :messages="$errors->get('icon')" class="mt-2" />
+    </div>
+
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
         <div>
             <x-input-label for="node_id" :value="__('Node')" />

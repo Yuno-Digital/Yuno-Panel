@@ -1,7 +1,12 @@
 <x-app-layout>
     <x-slot name="header">
         <div class="flex items-center justify-between">
-            <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-100 leading-tight">{{ $server->name }}</h2>
+            <div class="flex items-center gap-3">
+                @if ($server->displayIcon())
+                    <img src="{{ $server->displayIcon() }}" alt="" class="w-8 h-8 rounded object-contain bg-gray-100 dark:bg-gray-900 shrink-0">
+                @endif
+                <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-100 leading-tight">{{ $server->name }}</h2>
+            </div>
             <span class="text-xs font-mono text-gray-400">{{ $server->allocation?->address() }}</span>
         </div>
     </x-slot>
