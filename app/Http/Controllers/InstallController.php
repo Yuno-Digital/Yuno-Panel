@@ -70,6 +70,7 @@ class InstallController extends Controller
             'email' => $data['email'],
             'password' => Hash::make($data['password']),
             'is_admin' => true,
+            'is_root' => true,
             'role_id' => $role->id,
         ]);
 

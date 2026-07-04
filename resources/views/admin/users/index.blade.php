@@ -30,13 +30,21 @@
                                         @if ($user->role)
                                             <span class="text-xs text-gray-500 dark:text-gray-400">{{ $user->role->name }}</span>
                                         @endif
+                                        @if ($user->is_root)
+                                            <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">{{ __('Main admin') }}</span>
+                                        @endif
                                     </div>
                                 </td>
                                 <td class="px-6 py-4">{{ $user->servers_count }}</td>
                                 <td class="px-6 py-4">
+                                    @php $canManage = ! $user->is_root || $user->is(auth()->user()); @endphp
                                     <div class="flex justify-end gap-2">
-                                        <a href="{{ route('admin.users.edit', $user) }}" class="text-indigo-600 hover:underline">{{ __('Edit') }}</a>
-                                        @unless ($user->is(auth()->user()))
+                                        @if ($canManage)
+                                            <a href="{{ route('admin.users.edit', $user) }}" class="text-indigo-600 hover:underline">{{ __('Edit') }}</a>
+                                        @else
+                                            <span class="text-xs text-gray-400">{{ __('Protected') }}</span>
+                                        @endif
+                                        @unless ($user->is_root || $user->is(auth()->user()))
                                             <form method="POST" action="{{ route('admin.users.destroy', $user) }}"
                                                   data-confirm="Delete this user?" data-confirm-button="Delete">
                                                 @csrf @method('DELETE')

@@ -46,13 +46,24 @@ class UserController extends Controller
         return redirect()->route('admin.users.index')->with('status', 'User created.');
     }
 
-    public function edit(User $user): View
+    public function edit(User $user): View|RedirectResponse
     {
+        if ($user->is_root && ! $user->is(request()->user())) {
+            return redirect()->route('admin.users.index')
+                ->with('error', 'Only the main admin can edit that account.');
+        }
+
         return view('admin.users.edit', compact('user') + ['roles' => Role::orderBy('name')->get()]);
     }
 
     public function update(Request $request, User $user): RedirectResponse
     {
+        // Only the main admin may edit the main admin account.
+        if ($user->is_root && ! $user->is($request->user())) {
+            return redirect()->route('admin.users.index')
+                ->with('error', 'Only the main admin can edit that account.');
+        }
+
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
@@ -63,7 +74,8 @@ class UserController extends Controller
 
         $user->name = $data['name'];
         $user->email = $data['email'];
-        $user->is_admin = $request->boolean('is_admin');
+        // The main admin always keeps administrator access — it can't be removed.
+        $user->is_admin = $user->is_root ? true : $request->boolean('is_admin');
         $user->role_id = $data['role_id'] ?? null;
 
         if (! empty($data['password'])) {
@@ -77,6 +89,11 @@ class UserController extends Controller
 
     public function destroy(Request $request, User $user): RedirectResponse
     {
+        if ($user->is_root) {
+            return redirect()->route('admin.users.index')
+                ->with('error', 'The main admin account cannot be deleted.');
+        }
+
         if ($user->is($request->user())) {
             return redirect()->route('admin.users.index')
                 ->with('error', 'You cannot delete your own account.');
