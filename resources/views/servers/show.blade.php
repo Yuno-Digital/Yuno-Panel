@@ -131,7 +131,7 @@
                                             class="rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-indigo-600 dark:checked:bg-indigo-500 focus:ring-indigo-500 dark:focus:ring-offset-gray-800"></td>
                                     <td class="px-2 py-2 min-w-0">
                                         <button @click="open(e)" class="flex items-center gap-2 text-gray-800 dark:text-gray-200 hover:text-indigo-600 max-w-full">
-                                            <span class="shrink-0" x-text="fileIcon(e)"></span>
+                                            <span class="shrink-0" :class="fileIconColor(e)" x-html="fileIcon(e)"></span>
                                             <span class="truncate" x-text="e.name"></span>
                                         </button>
                                     </td>
@@ -502,26 +502,46 @@
                 },
                 fmtDate(ts) { return ts ? new Date(ts * 1000).toLocaleString() : ''; },
                 fullPath(name) { return (this.path === '/' ? '' : this.path) + '/' + name; },
-                // Pick an icon based on the file's extension.
-                fileIcon(e) {
-                    if (e.directory) return '📁';
+                // Categorise a file by extension for its icon.
+                fileType(e) {
+                    if (e.directory) return 'dir';
                     const name = e.name.toLowerCase();
                     const ext = name.includes('.') ? name.split('.').pop() : '';
                     const groups = {
-                        '🖼️': ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'ico', 'bmp'],
-                        '⚙️': ['json', 'yml', 'yaml', 'toml', 'ini', 'conf', 'cfg', 'properties', 'env', 'lock'],
-                        '📜': ['js', 'mjs', 'cjs', 'ts', 'py', 'php', 'go', 'rs', 'java', 'kt', 'c', 'h', 'cpp', 'cs', 'lua', 'rb', 'sh', 'bash'],
-                        '📦': ['zip', 'tar', 'gz', 'tgz', 'rar', '7z', 'jar'],
-                        '🌐': ['html', 'htm', 'xml'],
-                        '🎨': ['css', 'scss', 'sass'],
-                        '🗄️': ['db', 'sqlite', 'sql', 'mca', 'dat'],
-                        '📋': ['log'],
-                        '📝': ['md', 'txt'],
+                        image: ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'ico', 'bmp'],
+                        config: ['json', 'yml', 'yaml', 'toml', 'ini', 'conf', 'cfg', 'properties', 'env', 'lock'],
+                        code: ['js', 'mjs', 'cjs', 'ts', 'py', 'php', 'go', 'rs', 'java', 'kt', 'c', 'h', 'cpp', 'cs', 'lua', 'rb', 'sh', 'bash', 'html', 'htm', 'xml', 'css', 'scss', 'sass'],
+                        archive: ['zip', 'tar', 'gz', 'tgz', 'rar', '7z', 'jar'],
+                        data: ['db', 'sqlite', 'sql', 'mca', 'dat', 'nbt'],
+                        text: ['log', 'md', 'txt'],
                     };
-                    for (const icon in groups) {
-                        if (groups[icon].includes(ext)) return icon;
+                    for (const t in groups) {
+                        if (groups[t].includes(ext)) return t;
                     }
-                    return '📄';
+                    return 'file';
+                },
+                // Tailwind text color for the icon, by category.
+                fileIconColor(e) {
+                    return ({
+                        dir: 'text-amber-500', image: 'text-fuchsia-400', config: 'text-teal-400',
+                        code: 'text-blue-400', archive: 'text-orange-400', data: 'text-emerald-400',
+                        text: 'text-sky-400', file: 'text-gray-400',
+                    })[this.fileType(e)] || 'text-gray-400';
+                },
+                // A Heroicon SVG for the file's category (rendered via x-html).
+                fileIcon(e) {
+                    const paths = {
+                        dir: '<path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z"/>',
+                        image: '<path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"/>',
+                        config: '<path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>',
+                        code: '<path stroke-linecap="round" stroke-linejoin="round" d="M17.25 6.75L22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3l-4.5 16.5"/>',
+                        archive: '<path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5m8.25 3v6.75m0 0l-3-3m3 3l3-3M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z"/>',
+                        data: '<path stroke-linecap="round" stroke-linejoin="round" d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 3.75c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125"/>',
+                        text: '<path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/>',
+                        file: '<path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/>',
+                    };
+                    const body = paths[this.fileType(e)] || paths.file;
+                    return '<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">' + body + '</svg>';
                 },
                 // Binary/non-text files that shouldn't be opened in the editor.
                 isBinary(name) {
