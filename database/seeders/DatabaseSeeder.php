@@ -18,16 +18,23 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        Role::firstOrCreate(['name' => 'Administrator'], ['permissions' => ['administrator']]);
-        Role::firstOrCreate(['name' => 'Support'], ['permissions' => ['servers.manage', 'users.manage']]);
+        // The single default role: full access, and it cannot be deleted.
+        $admin = Role::firstOrCreate(['name' => 'Admin'], ['permissions' => ['administrator'], 'is_default' => true]);
+        $admin->update(['permissions' => ['administrator'], 'is_default' => true]);
 
-        User::firstOrCreate(
+        $user = User::firstOrCreate(
             ['email' => 'admin@yuno.local'],
             [
                 'name' => 'Admin',
                 'password' => Hash::make('password'),
                 'is_admin' => true,
+                'role_id' => $admin->id,
             ],
         );
+
+        // Ensure the admin account always carries the Admin role.
+        if ($user->role_id !== $admin->id) {
+            $user->update(['role_id' => $admin->id]);
+        }
     }
 }

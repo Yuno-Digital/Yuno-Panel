@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['name', 'permissions'])]
+#[Fillable(['name', 'permissions', 'is_default'])]
 class Role extends Model
 {
     /**
@@ -26,7 +26,10 @@ class Role extends Model
 
     protected function casts(): array
     {
-        return ['permissions' => 'array'];
+        return [
+            'permissions' => 'array',
+            'is_default' => 'boolean',
+        ];
     }
 
     /**
