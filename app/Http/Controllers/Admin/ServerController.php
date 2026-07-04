@@ -10,6 +10,7 @@ use App\Models\Server;
 use App\Models\User;
 use App\Notifications\PanelNotification;
 use App\Services\WingsClient;
+use App\Support\Webhooks;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -62,6 +63,11 @@ class ServerController extends Controller
             __('Your server ":name" was created.', ['name' => $server->name]),
             route('servers.show', $server),
         ));
+
+        Webhooks::dispatch('server.created', [
+            'server' => ['id' => $server->id, 'uuid' => $server->uuid, 'name' => $server->name],
+            'owner' => ['id' => $server->owner?->id, 'email' => $server->owner?->email],
+        ]);
 
         return redirect()->route('admin.servers.edit', $server)->with(
             'status',
