@@ -45,6 +45,7 @@ class PluginManager
                 'namespace' => $meta['namespace'] ?? null,
                 'provider' => $meta['provider'] ?? null,
                 'settings' => is_array($meta['settings'] ?? null) ? $meta['settings'] : [],
+                'info' => is_array($meta['info'] ?? null) ? $meta['info'] : [],
                 'path' => dirname($manifest),
             ];
         }

@@ -72,7 +72,7 @@
                         </p>
                     </div>
                     <div class="shrink-0 flex items-center gap-2">
-                        @if (! empty($plugin['settings']))
+                        @if (! empty($plugin['settings']) || ! empty($plugin['info']))
                             <a href="{{ route('admin.plugins.settings', $plugin['id']) }}">
                                 <x-secondary-button type="button">{{ __('Settings') }}</x-secondary-button>
                             </a>

@@ -47,13 +47,21 @@ class PluginController extends Controller
     {
         $meta = PluginManager::discover()[$plugin] ?? abort(404);
 
-        if (empty($meta['settings'])) {
+        if (empty($meta['settings']) && empty($meta['info'])) {
             return redirect()->route('admin.plugins.index');
         }
+
+        // Resolve {url} in info values to the panel's base URL.
+        $info = collect($meta['info'] ?? [])->map(function ($item) {
+            $item['value'] = strtr((string) ($item['value'] ?? ''), ['{url}' => rtrim(url('/'), '/')]);
+
+            return $item;
+        })->all();
 
         return view('admin.plugins.settings', [
             'plugin' => $meta,
             'values' => PluginManager::settingsFor($plugin),
+            'info' => $info,
         ]);
     }
 
