@@ -59,7 +59,7 @@ fi
 # --- Node.js ---
 if ! command -v node >/dev/null 2>&1 || [ "$(node -v | sed 's/v\([0-9]*\).*/\1/')" -lt "$NODE_MAJOR" ]; then
     log "Installing Node.js ${NODE_MAJOR}"
-    curl -fsSL "https://deb.nodesource.com/setup_${NODE_MAJOR}.x" | $SUDO -E bash -
+    curl -fsSL "https://deb.nodesource.com/setup_${NODE_MAJOR}.x" | $SUDO bash -
     $SUDO apt-get install -y nodejs
 fi
 
