@@ -111,4 +111,32 @@ window.runningCount = (urls) => ({
     },
 });
 
+// Notification bell: polls the current user's notifications and unread count.
+window.notifications = (indexUrl, readUrl, csrf) => ({
+    open: false,
+    unread: 0,
+    items: [],
+    start() {
+        this.load();
+        setInterval(() => this.load(), 20000);
+    },
+    async load() {
+        try {
+            const r = await (await fetch(indexUrl)).json();
+            this.unread = r.unread || 0;
+            this.items = r.items || [];
+        } catch (e) { /* ignore */ }
+    },
+    toggle() {
+        this.open = !this.open;
+    },
+    async markAllRead() {
+        try {
+            await fetch(readUrl, { method: 'POST', headers: { 'X-CSRF-TOKEN': csrf } });
+        } catch (e) { /* ignore */ }
+        this.unread = 0;
+        this.items = this.items.map((n) => ({ ...n, read: true }));
+    },
+});
+
 Alpine.start();

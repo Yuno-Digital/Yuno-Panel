@@ -55,6 +55,40 @@
                 </div>
             </div>
 
+            <!-- Notifications -->
+            <div class="hidden sm:flex sm:items-center sm:ms-6"
+                 x-data="notifications('{{ route('notifications.index') }}', '{{ route('notifications.read') }}', '{{ csrf_token() }}')" x-init="start()">
+                <div class="relative" @click.outside="open = false">
+                    <button @click="toggle()" class="relative p-2 rounded-md text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 focus:outline-none">
+                        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0"/></svg>
+                        <span x-show="unread > 0" x-cloak x-text="unread > 99 ? '99+' : unread"
+                              class="absolute -top-0.5 -right-0.5 min-w-[1rem] h-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-semibold flex items-center justify-center"></span>
+                    </button>
+                    <div x-show="open" x-cloak x-transition
+                         class="absolute right-0 mt-2 w-80 rounded-md bg-white dark:bg-gray-800 shadow-lg ring-1 ring-black/5 z-50">
+                        <div class="flex items-center justify-between px-4 py-2 border-b border-gray-100 dark:border-gray-700">
+                            <span class="text-sm font-semibold text-gray-700 dark:text-gray-200">{{ __('Notifications') }}</span>
+                            <button @click="markAllRead()" x-show="unread > 0" class="text-xs text-indigo-600 hover:underline">{{ __('Mark all read') }}</button>
+                        </div>
+                        <div class="max-h-96 overflow-auto divide-y divide-gray-100 dark:divide-gray-700">
+                            <template x-for="n in items" :key="n.id">
+                                <a :href="n.url || '#'" class="block px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/40" :class="!n.read ? 'bg-indigo-50/60 dark:bg-indigo-900/10' : ''">
+                                    <div class="flex items-start gap-2">
+                                        <span class="mt-1.5 w-1.5 h-1.5 rounded-full shrink-0" :class="!n.read ? 'bg-indigo-500' : 'bg-transparent'"></span>
+                                        <div class="min-w-0">
+                                            <p class="text-sm font-medium text-gray-800 dark:text-gray-100" x-text="n.title"></p>
+                                            <p class="text-xs text-gray-500 dark:text-gray-400" x-text="n.message"></p>
+                                            <p class="text-[11px] text-gray-400 mt-0.5" x-text="n.at"></p>
+                                        </div>
+                                    </div>
+                                </a>
+                            </template>
+                            <div x-show="items.length === 0" class="px-4 py-6 text-center text-sm text-gray-500 dark:text-gray-400">{{ __('No notifications') }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Settings Dropdown -->
             <div class="hidden sm:flex sm:items-center sm:ms-6">
                 <x-dropdown align="right" width="48">
