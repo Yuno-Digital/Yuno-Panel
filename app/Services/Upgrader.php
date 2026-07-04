@@ -54,8 +54,18 @@ class Upgrader
         if (! is_dir($home)) {
             @mkdir($home, 0775, true);
         }
+
+        // Ensure locally-installed binaries (vite, etc.) and the standard system
+        // paths are on PATH — php-fpm's environment is often minimal, so
+        // 'npm run build' would otherwise fail with "vite: not found".
+        $path = base_path('node_modules/.bin').':/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin';
+        if ($existing = getenv('PATH')) {
+            $path .= ':'.$existing;
+        }
+
         $env = [
             'HOME' => $home,
+            'PATH' => $path,
             'COMPOSER_HOME' => $home.'/composer',
             'COMPOSER_CACHE_DIR' => $home.'/composer/cache',
             'npm_config_cache' => $home.'/npm-cache',
