@@ -12,6 +12,7 @@
             'settings' => __('Settings'),
             'allocations' => __('Allocations').' ('.$node->allocations->count().')',
             'deploy' => __('Auto Deploy'),
+            'daemon' => __('Daemon'),
         ]])
 
         {{-- Settings --}}
@@ -101,6 +102,49 @@
                     </form>
                 </div>
                 <code class="mt-2 block break-all rounded bg-gray-50 dark:bg-gray-900/60 border border-gray-200 dark:border-gray-700 px-2 py-1 font-mono text-xs text-gray-700 dark:text-gray-300">{{ $node->daemon_token }}</code>
+            </div>
+        </div>
+
+        {{-- Daemon (version + update) --}}
+        <div x-show="tab === 'daemon'" x-cloak class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6 max-w-3xl">
+            <h4 class="text-base font-semibold text-gray-900 dark:text-gray-100">{{ __('Wings daemon') }}</h4>
+
+            <dl class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                <div>
+                    <dt class="text-gray-500 dark:text-gray-400">{{ __('Installed version') }}</dt>
+                    <dd class="mt-1 flex items-center gap-2 font-mono text-gray-900 dark:text-gray-100">
+                        {{ $node->daemon_version ? 'v'.$node->daemon_version : '—' }}
+                        @if ($daemonUpdateAvailable)
+                            <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300">{{ __('Update available') }}</span>
+                        @elseif ($node->daemon_version && $latestDaemon)
+                            <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300">{{ __('Up to date') }}</span>
+                        @endif
+                    </dd>
+                </div>
+                <div>
+                    <dt class="text-gray-500 dark:text-gray-400">{{ __('Latest release') }}</dt>
+                    <dd class="mt-1 font-mono text-gray-900 dark:text-gray-100">{{ $latestDaemon ? 'v'.$latestDaemon : '—' }}</dd>
+                </div>
+            </dl>
+
+            <p class="mt-4 text-xs text-gray-500 dark:text-gray-400">
+                {{ __('The installed version is read when the node is polled. Use Refresh on the Nodes list (or save the node) to update it.') }}
+            </p>
+
+            <div class="mt-5 border-t border-gray-200 dark:border-gray-700 pt-4 flex items-center justify-between gap-4">
+                <div>
+                    <p class="text-sm font-medium text-gray-800 dark:text-gray-200">{{ __('Update daemon') }}</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">{{ __('Pulls the latest daemon, rebuilds and restarts it. The node is briefly offline (~1 min).') }}</p>
+                </div>
+                @if ($node->is_online)
+                    <form method="POST" action="{{ route('admin.nodes.upgrade', $node) }}"
+                          data-confirm="Update the daemon on {{ $node->name }}? It will restart and be briefly offline." data-confirm-button="Update" data-confirm-icon="question">
+                        @csrf
+                        <x-primary-button type="submit">{{ $daemonUpdateAvailable ? __('Update to').' v'.$latestDaemon : __('Update to latest') }}</x-primary-button>
+                    </form>
+                @else
+                    <x-secondary-button type="button" disabled class="opacity-50 cursor-not-allowed">{{ __('Node offline') }}</x-secondary-button>
+                @endif
             </div>
         </div>
     </div>

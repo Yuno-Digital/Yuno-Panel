@@ -13,6 +13,11 @@ return [
     'repository' => env('YUNO_REPOSITORY', 'Yuno-Digital/Yuno-Panel'),
 
     /*
+     * Wings (node daemon) repository, used to check for daemon updates.
+     */
+    'wings_repository' => env('YUNO_WINGS_REPOSITORY', 'Yuno-Digital/Yuno-Panel-Wings'),
+
+    /*
      * Plugins repository (owner/name and branch) browsed by the in-panel
      * plugin installer.
      */

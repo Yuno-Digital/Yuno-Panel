@@ -57,9 +57,28 @@ class WingsClient
             'is_online' => true,
             'memory_mb' => (int) ($system['memory_mb'] ?? 0),
             'disk_mb' => (int) ($system['disk_mb'] ?? 0),
+            'daemon_version' => ($v = (string) ($system['version'] ?? '')) !== '' ? $v : null,
         ])->save();
 
         return true;
+    }
+
+    /**
+     * Ask the node's daemon to self-update (pull, rebuild, restart). Returns
+     * true if the update was accepted.
+     */
+    public function update(Node $node): bool
+    {
+        try {
+            $response = Http::withToken((string) $node->daemon_token)
+                ->timeout(15)
+                ->acceptJson()
+                ->post($node->daemonUrl().'/api/update');
+        } catch (Throwable) {
+            return false;
+        }
+
+        return $response->successful();
     }
 
     /**
