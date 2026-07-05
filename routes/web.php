@@ -63,6 +63,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/servers/{server}/databases', [ServerController::class, 'storeDatabase'])->name('servers.databases.store');
     Route::patch('/servers/{server}/databases/{database}', [ServerController::class, 'rotateDatabase'])->name('servers.databases.rotate');
     Route::delete('/servers/{server}/databases/{database}', [ServerController::class, 'destroyDatabase'])->name('servers.databases.destroy');
+    Route::post('/servers/{server}/allocations', [ServerController::class, 'addAllocation'])->name('servers.allocations.add');
+    Route::patch('/servers/{server}/allocations/{allocation}', [ServerController::class, 'makePrimaryAllocation'])->name('servers.allocations.primary');
+    Route::delete('/servers/{server}/allocations/{allocation}', [ServerController::class, 'removeAllocation'])->name('servers.allocations.remove');
     Route::post('/servers/{server}/backups', [ServerController::class, 'storeBackup'])->name('servers.backups.store');
     Route::get('/servers/{server}/backups/{backup}/download', [ServerController::class, 'downloadBackup'])->name('servers.backups.download');
     Route::post('/servers/{server}/backups/{backup}/restore', [ServerController::class, 'restoreBackup'])->name('servers.backups.restore');

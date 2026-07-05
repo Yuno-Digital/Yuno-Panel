@@ -191,6 +191,16 @@ class Server extends Model
     }
 
     /**
+     * All allocations assigned to this server (primary + additional).
+     *
+     * @return HasMany<Allocation, $this>
+     */
+    public function allocations(): HasMany
+    {
+        return $this->hasMany(Allocation::class);
+    }
+
+    /**
      * The server's filled-in egg variable values.
      *
      * @return HasMany<ServerVariable, $this>

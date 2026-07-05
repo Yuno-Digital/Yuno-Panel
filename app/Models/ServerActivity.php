@@ -82,6 +82,9 @@ class ServerActivity extends Model
             'backup:created' => __('Created backup ":n"', ['n' => $p['name'] ?? '']),
             'backup:restored' => __('Restored backup ":n"', ['n' => $p['name'] ?? '']),
             'backup:deleted' => __('Deleted backup ":n"', ['n' => $p['name'] ?? '']),
+            'allocation:added' => __('Added allocation :a', ['a' => $p['address'] ?? '']),
+            'allocation:removed' => __('Removed allocation :a', ['a' => $p['address'] ?? '']),
+            'allocation:primary' => __('Set primary allocation :a', ['a' => $p['address'] ?? '']),
             default => $this->event,
         };
     }

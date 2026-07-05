@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Allocation;
 use App\Models\Backup;
 use App\Models\DatabaseHost;
 use App\Models\ScheduledTask;
@@ -59,7 +60,8 @@ class ServerController extends Controller
             'activities' => fn ($q) => $q->with('user')->limit(100),
             'webhooks' => fn ($q) => $q->latest(),
             'databases' => fn ($q) => $q->with('host')->latest(),
-            'backups' => fn ($q) => $q->latest()]);
+            'backups' => fn ($q) => $q->latest(),
+            'allocations' => fn ($q) => $q->orderBy('ip')->orderBy('port')]);
 
         // What the current user may do here (owner/admin can do everything).
         $user = $request->user();
@@ -81,8 +83,11 @@ class ServerController extends Controller
         $activeTab = in_array($tab, $tabs, true) ? $tab : ($tabs[0] ?? 'settings');
 
         $databaseHosts = in_array('databases', $tabs, true) ? DatabaseHost::orderBy('name')->get() : collect();
+        $freeAllocations = $manages
+            ? Allocation::where('node_id', $server->node_id)->free()->orderBy('ip')->orderBy('port')->get()
+            : collect();
 
-        return view('servers.show', compact('server', 'activeTab', 'manages', 'permissions', 'tabs', 'databaseHosts'));
+        return view('servers.show', compact('server', 'activeTab', 'manages', 'permissions', 'tabs', 'databaseHosts', 'freeAllocations'));
     }
 
     /**
@@ -630,6 +635,57 @@ class ServerController extends Controller
         ServerActivity::record($server, 'backup:deleted', ['name' => $name]);
 
         return redirect()->route('servers.show.tab', [$server, 'backups'])->with('status', __('Backup deleted.'));
+    }
+
+    /**
+     * Assign a free allocation on the server's node to the server.
+     */
+    public function addAllocation(Request $request, Server $server): RedirectResponse
+    {
+        $this->authorizeManage($request, $server);
+        $data = $request->validate(['allocation_id' => ['required', 'integer', 'exists:allocations,id']]);
+
+        $allocation = Allocation::find($data['allocation_id']);
+        if ($allocation === null || $allocation->server_id !== null || $allocation->node_id !== $server->node_id) {
+            return back()->with('error', __('That allocation is not available.'));
+        }
+
+        $allocation->update(['server_id' => $server->id]);
+        ServerActivity::record($server, 'allocation:added', ['address' => $allocation->address()]);
+
+        return redirect()->route('servers.show.tab', [$server, 'network'])->with('status', __('Allocation added.'));
+    }
+
+    /**
+     * Make an assigned allocation the server's primary one.
+     */
+    public function makePrimaryAllocation(Request $request, Server $server, Allocation $allocation): RedirectResponse
+    {
+        $this->authorizeManage($request, $server);
+        abort_if($allocation->server_id !== $server->id, 404);
+
+        $server->update(['allocation_id' => $allocation->id]);
+        ServerActivity::record($server, 'allocation:primary', ['address' => $allocation->address()]);
+
+        return redirect()->route('servers.show.tab', [$server, 'network'])->with('status', __('Primary allocation updated.'));
+    }
+
+    /**
+     * Unassign an additional allocation from the server (not the primary).
+     */
+    public function removeAllocation(Request $request, Server $server, Allocation $allocation): RedirectResponse
+    {
+        $this->authorizeManage($request, $server);
+        abort_if($allocation->server_id !== $server->id, 404);
+
+        if ($allocation->id === $server->allocation_id) {
+            return back()->with('error', __('Cannot remove the primary allocation. Make another one primary first.'));
+        }
+
+        $allocation->update(['server_id' => null]);
+        ServerActivity::record($server, 'allocation:removed', ['address' => $allocation->address()]);
+
+        return redirect()->route('servers.show.tab', [$server, 'network'])->with('status', __('Allocation removed.'));
     }
 
     /**
