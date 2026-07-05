@@ -29,9 +29,15 @@ class PluginController extends Controller
             'id' => ['required', 'string', 'regex:/^[a-z0-9._-]+$/i'],
         ]);
 
-        $available = collect(PluginManager::available())->pluck('id')->all();
-        if (! in_array($data['id'], $available, true)) {
+        $entry = collect(PluginManager::available())->firstWhere('id', $data['id']);
+        if ($entry === null) {
             return redirect()->route('admin.plugins.index')->with('error', __('That plugin is not available.'));
+        }
+
+        $compat = $entry['compat'] ?? ['ok' => true, 'issues' => []];
+        if (! ($compat['ok'] ?? true)) {
+            return redirect()->route('admin.plugins.index')
+                ->with('error', __('Incompatible plugin: :issues.', ['issues' => implode('; ', $compat['issues'] ?? [])]));
         }
 
         if (! PluginManager::install($data['id'])) {

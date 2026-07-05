@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Models\Node;
 use App\Models\Plugin;
 use App\Models\PluginSetting;
 use Illuminate\Support\Facades\File;
@@ -47,6 +48,7 @@ class PluginManager
                 'provider' => $meta['provider'] ?? null,
                 'settings' => is_array($meta['settings'] ?? null) ? $meta['settings'] : [],
                 'info' => is_array($meta['info'] ?? null) ? $meta['info'] : [],
+                'requires' => is_array($meta['requires'] ?? null) ? $meta['requires'] : null,
                 'path' => dirname($manifest),
             ];
         }
@@ -88,6 +90,7 @@ class PluginManager
                 'latest_version' => $latestVersion,
                 'update_available' => $latestVersion !== '' && $p['version'] !== ''
                     && version_compare($latestVersion, $p['version'], '>'),
+                'compat' => self::checkRequires($p['requires'] ?? null),
             ];
         }, self::discover()));
     }
@@ -155,10 +158,93 @@ class PluginManager
     {
         $installed = array_keys(self::discover());
 
-        return array_values(array_filter(
-            self::registry(),
-            fn ($p) => is_array($p) && ! empty($p['id']) && ! in_array($p['id'], $installed, true),
+        return array_values(array_map(
+            fn (array $p) => $p + ['compat' => self::checkRequires($p['requires'] ?? null)],
+            array_filter(
+                self::registry(),
+                fn ($p) => is_array($p) && ! empty($p['id']) && ! in_array($p['id'], $installed, true),
+            ),
         ));
+    }
+
+    /**
+     * Check a plugin's `requires` spec against the current panel and node
+     * (Wings) versions.
+     *
+     * `requires` looks like: {"panel": {"min": "1.0.0", "max": "2.0.0"},
+     * "wings": {"min": "1.0.0"}}. A constraint may also be a bare string, taken
+     * as a minimum. Missing keys mean "no constraint".
+     *
+     * @param  array<string, mixed>|null  $requires
+     * @return array{ok: bool, issues: array<int, string>}
+     */
+    public static function checkRequires(?array $requires): array
+    {
+        $issues = [];
+
+        if (is_array($requires)) {
+            if (! empty($requires['panel'])) {
+                $issues = array_merge($issues, self::constraintIssues('Panel', (string) config('yuno.version'), $requires['panel']));
+            }
+
+            if (! empty($requires['wings'])) {
+                $wings = self::lowestNodeVersion();
+                // Only enforce when at least one node reports a version.
+                if ($wings !== null) {
+                    $issues = array_merge($issues, self::constraintIssues('Wings', $wings, $requires['wings']));
+                }
+            }
+        }
+
+        return ['ok' => $issues === [], 'issues' => $issues];
+    }
+
+    /**
+     * Issues for a single min/max constraint against an installed version.
+     *
+     * @return array<int, string>
+     */
+    protected static function constraintIssues(string $label, string $installed, mixed $constraint): array
+    {
+        $min = null;
+        $max = null;
+        if (is_string($constraint)) {
+            $min = ltrim($constraint, '>=v ');
+        } elseif (is_array($constraint)) {
+            $min = $constraint['min'] ?? null;
+            $max = $constraint['max'] ?? null;
+        }
+
+        $installed = ltrim($installed, 'vV');
+        $issues = [];
+        if ($min && version_compare($installed, ltrim((string) $min, 'vV'), '<')) {
+            $issues[] = "requires {$label} ≥ {$min} (you have {$installed})";
+        }
+        if ($max && version_compare($installed, ltrim((string) $max, 'vV'), '>')) {
+            $issues[] = "requires {$label} ≤ {$max} (you have {$installed})";
+        }
+
+        return $issues;
+    }
+
+    /**
+     * The lowest daemon version across nodes that report one, or null if none do.
+     */
+    protected static function lowestNodeVersion(): ?string
+    {
+        try {
+            $versions = array_values(array_filter(Node::whereNotNull('daemon_version')->pluck('daemon_version')->all()));
+        } catch (Throwable) {
+            return null;
+        }
+
+        if ($versions === []) {
+            return null;
+        }
+
+        usort($versions, fn ($a, $b) => version_compare(ltrim((string) $a, 'vV'), ltrim((string) $b, 'vV')));
+
+        return (string) $versions[0];
     }
 
     /**
