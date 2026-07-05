@@ -25,6 +25,7 @@ class Server extends Model
         'console' => 'View console & send commands',
         'power' => 'Start / stop / restart',
         'files' => 'Manage files',
+        'schedules' => 'Manage scheduled tasks',
         'startup' => 'Edit startup & variables',
         'reinstall' => 'Reinstall the server',
     ];
@@ -48,6 +49,16 @@ class Server extends Model
             ->using(ServerSubuser::class)
             ->withPivot('permissions')
             ->withTimestamps();
+    }
+
+    /**
+     * Scheduled tasks (timed power actions / console commands) on this server.
+     *
+     * @return HasMany<ScheduledTask, $this>
+     */
+    public function scheduledTasks(): HasMany
+    {
+        return $this->hasMany(ScheduledTask::class);
     }
 
     /**

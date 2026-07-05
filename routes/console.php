@@ -13,3 +13,9 @@ Artisan::command('inspire', function () {
 Schedule::command('nodes:refresh')
     ->everyMinute()
     ->withoutOverlapping();
+
+// Run any server scheduled tasks (timed power actions / console commands) whose
+// cron time has come due.
+Schedule::command('schedules:run')
+    ->everyMinute()
+    ->withoutOverlapping();

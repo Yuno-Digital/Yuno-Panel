@@ -234,6 +234,18 @@ fi
 
 php artisan storage:link >/dev/null 2>&1 || true
 
+# Install the Laravel scheduler cron so background tasks run every minute:
+# node status polling (nodes:refresh) and server scheduled tasks (schedules:run).
+log "Installing the scheduler cron (/etc/cron.d/yuno-panel)"
+CRON_USER="www-data"; getent passwd www-data >/dev/null 2>&1 || CRON_USER="root"
+$SUDO tee /etc/cron.d/yuno-panel >/dev/null <<CRON
+# Yuno Panel scheduler — runs Laravel's scheduled tasks every minute.
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+* * * * * ${CRON_USER} cd ${DIR} && php artisan schedule:run >> /dev/null 2>&1
+CRON
+$SUDO chmod 0644 /etc/cron.d/yuno-panel
+$SUDO systemctl restart cron 2>/dev/null || $SUDO service cron restart 2>/dev/null || true
+
 # Optional: configure nginx + a Let's Encrypt certificate for a domain.
 PANEL_URL=""
 SERVER_IP4=""

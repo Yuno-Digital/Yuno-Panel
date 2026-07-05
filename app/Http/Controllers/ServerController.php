@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ScheduledTask;
 use App\Models\Server;
 use App\Models\User;
 use App\Notifications\PanelNotification;
 use App\Services\WingsClient;
 use App\Support\Webhooks;
+use Cron\CronExpression;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -44,7 +46,8 @@ class ServerController extends Controller
     {
         $this->authorizeServer($request, $server);
 
-        $server->load(['egg.variables', 'node', 'allocation', 'variables.eggVariable', 'subusers']);
+        $server->load(['egg.variables', 'node', 'allocation', 'variables.eggVariable', 'subusers',
+            'scheduledTasks' => fn ($q) => $q->orderBy('name')]);
 
         // What the current user may do here (owner/admin can do everything).
         $user = $request->user();
@@ -54,7 +57,7 @@ class ServerController extends Controller
             : ($server->subuserPermissions($user) ?? []);
 
         // Tabs the user is allowed to see (Settings is always available).
-        $tabs = array_values(array_filter(['console', 'files', 'startup', 'settings'], fn ($t) => $t === 'settings' || in_array($t, $permissions, true)));
+        $tabs = array_values(array_filter(['console', 'files', 'schedules', 'startup', 'settings'], fn ($t) => $t === 'settings' || in_array($t, $permissions, true)));
         $activeTab = in_array($tab, $tabs, true) ? $tab : ($tabs[0] ?? 'settings');
 
         return view('servers.show', compact('server', 'activeTab', 'manages', 'permissions', 'tabs'));
@@ -298,6 +301,84 @@ class ServerController extends Controller
         $server->subusers()->detach($user->id);
 
         return back()->with('status', __('Subuser removed.'));
+    }
+
+    /**
+     * Cron expression for each schedule preset (or a validated custom one).
+     */
+    private const SCHEDULE_PRESETS = [
+        'every_5' => '*/5 * * * *',
+        'every_15' => '*/15 * * * *',
+        'every_30' => '*/30 * * * *',
+        'hourly' => '0 * * * *',
+        'every_6h' => '0 */6 * * *',
+        'daily' => '0 0 * * *',
+        'weekly' => '0 0 * * 0',
+    ];
+
+    /**
+     * Create a scheduled task (a timed power action or console command).
+     */
+    public function storeSchedule(Request $request, Server $server): RedirectResponse
+    {
+        $this->authorizeServer($request, $server, 'schedules');
+
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'action' => ['required', 'in:power,command'],
+            'power_action' => ['nullable', 'required_if:action,power', 'in:start,stop,restart'],
+            'command' => ['nullable', 'required_if:action,command', 'string', 'max:2000'],
+            'preset' => ['required', Rule::in([...array_keys(self::SCHEDULE_PRESETS), 'custom'])],
+            'cron' => ['nullable', 'required_if:preset,custom', 'string', 'max:100'],
+        ]);
+
+        $cron = $data['preset'] === 'custom' ? trim((string) $data['cron']) : self::SCHEDULE_PRESETS[$data['preset']];
+        if (! CronExpression::isValidExpression($cron)) {
+            return back()->withInput()->with('error', __('That cron expression is not valid.'));
+        }
+
+        $task = new ScheduledTask([
+            'name' => $data['name'],
+            'action' => $data['action'],
+            'payload' => $data['action'] === 'power' ? $data['power_action'] : $data['command'],
+            'cron' => $cron,
+            'is_active' => true,
+        ]);
+        $server->scheduledTasks()->save($task);
+        $task->forceFill(['next_run_at' => $task->computeNextRun()])->save();
+
+        return redirect()->route('servers.show.tab', [$server, 'schedules'])->with('status', __('Schedule created.'));
+    }
+
+    /**
+     * Enable or disable a scheduled task.
+     */
+    public function toggleSchedule(Request $request, Server $server, ScheduledTask $schedule): RedirectResponse
+    {
+        $this->authorizeServer($request, $server, 'schedules');
+        abort_if($schedule->server_id !== $server->id, 404);
+
+        $active = ! $schedule->is_active;
+        $schedule->forceFill([
+            'is_active' => $active,
+            'next_run_at' => $active ? $schedule->computeNextRun() : null,
+        ])->save();
+
+        return redirect()->route('servers.show.tab', [$server, 'schedules'])
+            ->with('status', $active ? __('Schedule enabled.') : __('Schedule disabled.'));
+    }
+
+    /**
+     * Delete a scheduled task.
+     */
+    public function destroySchedule(Request $request, Server $server, ScheduledTask $schedule): RedirectResponse
+    {
+        $this->authorizeServer($request, $server, 'schedules');
+        abort_if($schedule->server_id !== $server->id, 404);
+
+        $schedule->delete();
+
+        return redirect()->route('servers.show.tab', [$server, 'schedules'])->with('status', __('Schedule deleted.'));
     }
 
     /**
