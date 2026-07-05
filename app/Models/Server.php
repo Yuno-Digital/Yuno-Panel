@@ -25,6 +25,7 @@ class Server extends Model
         'console' => 'View console & send commands',
         'power' => 'Start / stop / restart',
         'files' => 'Manage files',
+        'databases' => 'Manage databases',
         'schedules' => 'Manage scheduled tasks',
         'activity' => 'View the activity log',
         'startup' => 'Edit startup & variables',
@@ -80,6 +81,16 @@ class Server extends Model
     public function webhooks(): HasMany
     {
         return $this->hasMany(ServerWebhook::class);
+    }
+
+    /**
+     * Databases provisioned for this server.
+     *
+     * @return HasMany<ServerDatabase, $this>
+     */
+    public function databases(): HasMany
+    {
+        return $this->hasMany(ServerDatabase::class);
     }
 
     /**

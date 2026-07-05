@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\AllocationController;
 use App\Http\Controllers\Admin\ApiKeyController;
+use App\Http\Controllers\Admin\DatabaseHostController;
 use App\Http\Controllers\Admin\EggController;
 use App\Http\Controllers\Admin\EggImportController;
 use App\Http\Controllers\Admin\EggVariableController;
@@ -59,9 +60,12 @@ Route::middleware('auth')->group(function () {
     Route::post('/servers/{server}/webhooks', [ServerController::class, 'storeWebhook'])->name('servers.webhooks.store');
     Route::patch('/servers/{server}/webhooks/{webhook}', [ServerController::class, 'toggleWebhook'])->name('servers.webhooks.toggle');
     Route::delete('/servers/{server}/webhooks/{webhook}', [ServerController::class, 'destroyWebhook'])->name('servers.webhooks.destroy');
+    Route::post('/servers/{server}/databases', [ServerController::class, 'storeDatabase'])->name('servers.databases.store');
+    Route::patch('/servers/{server}/databases/{database}', [ServerController::class, 'rotateDatabase'])->name('servers.databases.rotate');
+    Route::delete('/servers/{server}/databases/{database}', [ServerController::class, 'destroyDatabase'])->name('servers.databases.destroy');
     // Deep-linkable UI tab, e.g. /servers/5/startup — resolves to the show page.
     Route::get('/servers/{server}/{tab}', [ServerController::class, 'show'])
-        ->whereIn('tab', ['console', 'files', 'schedules', 'activity', 'startup', 'settings'])->name('servers.show.tab');
+        ->whereIn('tab', ['console', 'files', 'databases', 'schedules', 'activity', 'network', 'startup', 'subusers', 'webhooks', 'settings'])->name('servers.show.tab');
 
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
     Route::post('/notifications/read', [NotificationController::class, 'markRead'])->name('notifications.read');
@@ -97,6 +101,7 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::resource('servers', AdminServerController::class)->except('show');
     Route::resource('users', AdminUserController::class)->except('show');
     Route::resource('roles', RoleController::class)->except('show');
+    Route::resource('database-hosts', DatabaseHostController::class)->except('show');
     Route::resource('webhooks', WebhookController::class)->except('show');
     Route::post('eggs/import', [EggImportController::class, 'store'])->name('eggs.import');
     Route::resource('eggs', EggController::class)->except('show');

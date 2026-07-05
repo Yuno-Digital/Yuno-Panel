@@ -2,12 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\DatabaseHost;
 use App\Models\ScheduledTask;
 use App\Models\Server;
 use App\Models\ServerActivity;
+use App\Models\ServerDatabase;
 use App\Models\ServerWebhook;
 use App\Models\User;
 use App\Notifications\PanelNotification;
+use App\Services\DatabaseManager;
 use App\Services\WingsClient;
 use App\Support\Webhooks;
 use Cron\CronExpression;
@@ -17,6 +20,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use Throwable;
 
 class ServerController extends Controller
 {
@@ -51,7 +55,8 @@ class ServerController extends Controller
         $server->load(['egg.variables', 'node', 'allocation', 'variables.eggVariable', 'subusers',
             'scheduledTasks' => fn ($q) => $q->orderBy('name'),
             'activities' => fn ($q) => $q->with('user')->limit(100),
-            'webhooks' => fn ($q) => $q->latest()]);
+            'webhooks' => fn ($q) => $q->latest(),
+            'databases' => fn ($q) => $q->with('host')->latest()]);
 
         // What the current user may do here (owner/admin can do everything).
         $user = $request->user();
@@ -63,7 +68,7 @@ class ServerController extends Controller
         // Tabs the user may see: network/settings are always shown, subusers and
         // webhooks are owner/admin only, the rest need the matching permission.
         $tabs = array_values(array_filter(
-            ['console', 'files', 'schedules', 'activity', 'network', 'startup', 'subusers', 'webhooks', 'settings'],
+            ['console', 'files', 'databases', 'schedules', 'activity', 'network', 'startup', 'subusers', 'webhooks', 'settings'],
             fn ($t) => match ($t) {
                 'settings', 'network' => true,
                 'subusers', 'webhooks' => $manages,
@@ -72,7 +77,9 @@ class ServerController extends Controller
         ));
         $activeTab = in_array($tab, $tabs, true) ? $tab : ($tabs[0] ?? 'settings');
 
-        return view('servers.show', compact('server', 'activeTab', 'manages', 'permissions', 'tabs'));
+        $databaseHosts = in_array('databases', $tabs, true) ? DatabaseHost::orderBy('name')->get() : collect();
+
+        return view('servers.show', compact('server', 'activeTab', 'manages', 'permissions', 'tabs', 'databaseHosts'));
     }
 
     /**
@@ -462,6 +469,75 @@ class ServerController extends Controller
         $webhook->delete();
 
         return redirect()->route('servers.show.tab', [$server, 'webhooks'])->with('status', __('Webhook deleted.'));
+    }
+
+    /**
+     * Provision a database (real MySQL database + user) for the server.
+     */
+    public function storeDatabase(Request $request, Server $server, DatabaseManager $manager): RedirectResponse
+    {
+        $this->authorizeServer($request, $server, 'databases');
+
+        $data = $request->validate([
+            'database_host_id' => ['required', 'integer', 'exists:database_hosts,id'],
+            'remote' => ['nullable', 'string', 'max:255', 'regex:/^[A-Za-z0-9%._-]+$/'],
+        ]);
+
+        $host = DatabaseHost::findOrFail($data['database_host_id']);
+        if ($host->max_databases !== null && $host->databases()->count() >= $host->max_databases) {
+            return back()->with('error', __('This database host has reached its limit.'));
+        }
+
+        try {
+            $db = $manager->create($server, $host, $data['remote'] ?? '%');
+            ServerActivity::record($server, 'database:created', ['name' => $db->database]);
+        } catch (Throwable $e) {
+            report($e);
+
+            return back()->with('error', __('Could not create the database: :m', ['m' => $e->getMessage()]));
+        }
+
+        return redirect()->route('servers.show.tab', [$server, 'databases'])->with('status', __('Database created.'));
+    }
+
+    /**
+     * Rotate a database user's password.
+     */
+    public function rotateDatabase(Request $request, Server $server, ServerDatabase $database, DatabaseManager $manager): RedirectResponse
+    {
+        $this->authorizeServer($request, $server, 'databases');
+        abort_if($database->server_id !== $server->id, 404);
+
+        try {
+            $manager->rotate($database);
+        } catch (Throwable $e) {
+            report($e);
+
+            return back()->with('error', __('Could not rotate the password: :m', ['m' => $e->getMessage()]));
+        }
+
+        return redirect()->route('servers.show.tab', [$server, 'databases'])->with('status', __('Password rotated.'));
+    }
+
+    /**
+     * Drop a database (and its user) and remove the record.
+     */
+    public function destroyDatabase(Request $request, Server $server, ServerDatabase $database, DatabaseManager $manager): RedirectResponse
+    {
+        $this->authorizeServer($request, $server, 'databases');
+        abort_if($database->server_id !== $server->id, 404);
+
+        $name = $database->database;
+        try {
+            $manager->drop($database);
+        } catch (Throwable $e) {
+            report($e);
+
+            return back()->with('error', __('Could not delete the database: :m', ['m' => $e->getMessage()]));
+        }
+        ServerActivity::record($server, 'database:deleted', ['name' => $name]);
+
+        return redirect()->route('servers.show.tab', [$server, 'databases'])->with('status', __('Database deleted.'));
     }
 
     /**

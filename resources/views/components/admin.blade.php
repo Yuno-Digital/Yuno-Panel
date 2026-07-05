@@ -9,6 +9,7 @@
             ['route' => 'admin.nodes.index', 'pattern' => 'admin.nodes.*', 'label' => 'Nodes'],
             ['route' => 'admin.servers.index', 'pattern' => 'admin.servers.*', 'label' => 'Servers'],
             ['route' => 'admin.eggs.index', 'pattern' => 'admin.eggs.*', 'label' => 'Eggs'],
+            ['route' => 'admin.database-hosts.index', 'pattern' => 'admin.database-hosts.*', 'label' => 'Database Hosts'],
             ['route' => 'admin.users.index', 'pattern' => 'admin.users.*', 'label' => 'Users'],
             ['route' => 'admin.roles.index', 'pattern' => 'admin.roles.*', 'label' => 'Roles'],
         ],
