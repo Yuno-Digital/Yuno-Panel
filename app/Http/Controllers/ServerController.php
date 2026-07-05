@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\ScheduledTask;
 use App\Models\Server;
+use App\Models\ServerActivity;
 use App\Models\User;
 use App\Notifications\PanelNotification;
 use App\Services\WingsClient;
@@ -47,7 +48,8 @@ class ServerController extends Controller
         $this->authorizeServer($request, $server);
 
         $server->load(['egg.variables', 'node', 'allocation', 'variables.eggVariable', 'subusers',
-            'scheduledTasks' => fn ($q) => $q->orderBy('name')]);
+            'scheduledTasks' => fn ($q) => $q->orderBy('name'),
+            'activities' => fn ($q) => $q->with('user')->limit(100)]);
 
         // What the current user may do here (owner/admin can do everything).
         $user = $request->user();
@@ -57,7 +59,7 @@ class ServerController extends Controller
             : ($server->subuserPermissions($user) ?? []);
 
         // Tabs the user is allowed to see (Settings is always available).
-        $tabs = array_values(array_filter(['console', 'files', 'schedules', 'startup', 'settings'], fn ($t) => $t === 'settings' || in_array($t, $permissions, true)));
+        $tabs = array_values(array_filter(['console', 'files', 'schedules', 'activity', 'startup', 'settings'], fn ($t) => $t === 'settings' || in_array($t, $permissions, true)));
         $activeTab = in_array($tab, $tabs, true) ? $tab : ($tabs[0] ?? 'settings');
 
         return view('servers.show', compact('server', 'activeTab', 'manages', 'permissions', 'tabs'));
@@ -110,6 +112,8 @@ class ServerController extends Controller
             );
         }
 
+        ServerActivity::record($server, 'server:settings');
+
         return redirect()->route('servers.show', $server)->with('status', 'Startup settings saved.');
     }
 
@@ -124,6 +128,7 @@ class ServerController extends Controller
         $ok = $this->wings->createContainer($server);
 
         if ($ok) {
+            ServerActivity::record($server, 'server:reinstall');
             $server->owner?->notify(new PanelNotification(
                 __('Installation started'),
                 __('":name" is being (re)installed.', ['name' => $server->name]),
@@ -151,6 +156,7 @@ class ServerController extends Controller
         $ok = $this->wings->power($server->load('node'), $data['action']);
 
         if ($ok) {
+            ServerActivity::record($server, 'server:power', ['action' => $data['action']]);
             Webhooks::dispatch('server.power', [
                 'server' => ['id' => $server->id, 'uuid' => $server->uuid, 'name' => $server->name],
                 'action' => $data['action'],
@@ -170,6 +176,10 @@ class ServerController extends Controller
         $data = $request->validate(['command' => ['required', 'string', 'max:2000']]);
 
         $ok = $this->wings->command($server->load('node'), $data['command']);
+
+        if ($ok) {
+            ServerActivity::record($server, 'server:command', ['command' => $data['command']]);
+        }
 
         return response()->json(['sent' => $ok], $ok ? 200 : 502);
     }
@@ -240,6 +250,10 @@ class ServerController extends Controller
 
         $ok = $this->wings->writeFile($server->load('node'), $data['path'], $data['contents'] ?? '');
 
+        if ($ok) {
+            ServerActivity::record($server, 'file:write', ['path' => $data['path']]);
+        }
+
         return response()->json(['saved' => $ok], $ok ? 200 : 502);
     }
 
@@ -255,6 +269,10 @@ class ServerController extends Controller
         ]);
 
         $ok = $this->wings->deleteFiles($server->load('node'), $data['paths']);
+
+        if ($ok) {
+            ServerActivity::record($server, 'file:delete', ['count' => count($data['paths'])]);
+        }
 
         return response()->json(['deleted' => $ok], $ok ? 200 : 502);
     }
@@ -282,6 +300,8 @@ class ServerController extends Controller
         $server->subusers()->syncWithoutDetaching([$user->id]);
         $server->subusers()->updateExistingPivot($user->id, ['permissions' => $permissions]);
 
+        ServerActivity::record($server, 'subuser:updated', ['user' => $user->email]);
+
         $user->notify(new PanelNotification(
             __('Server access granted'),
             __('You were given access to ":name".', ['name' => $server->name]),
@@ -299,6 +319,7 @@ class ServerController extends Controller
         $this->authorizeManage($request, $server);
 
         $server->subusers()->detach($user->id);
+        ServerActivity::record($server, 'subuser:removed', ['user' => $user->email]);
 
         return back()->with('status', __('Subuser removed.'));
     }
@@ -346,6 +367,7 @@ class ServerController extends Controller
         ]);
         $server->scheduledTasks()->save($task);
         $task->forceFill(['next_run_at' => $task->computeNextRun()])->save();
+        ServerActivity::record($server, 'schedule:created', ['name' => $task->name]);
 
         return redirect()->route('servers.show.tab', [$server, 'schedules'])->with('status', __('Schedule created.'));
     }
@@ -363,6 +385,7 @@ class ServerController extends Controller
             'is_active' => $active,
             'next_run_at' => $active ? $schedule->computeNextRun() : null,
         ])->save();
+        ServerActivity::record($server, 'schedule:toggled', ['name' => $schedule->name, 'active' => $active]);
 
         return redirect()->route('servers.show.tab', [$server, 'schedules'])
             ->with('status', $active ? __('Schedule enabled.') : __('Schedule disabled.'));
@@ -376,7 +399,9 @@ class ServerController extends Controller
         $this->authorizeServer($request, $server, 'schedules');
         abort_if($schedule->server_id !== $server->id, 404);
 
+        $name = $schedule->name;
         $schedule->delete();
+        ServerActivity::record($server, 'schedule:deleted', ['name' => $name]);
 
         return redirect()->route('servers.show.tab', [$server, 'schedules'])->with('status', __('Schedule deleted.'));
     }
