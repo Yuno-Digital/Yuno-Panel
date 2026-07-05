@@ -15,6 +15,10 @@
 
         <!-- Scripts -->
         @vite(['resources/css/app.css', 'resources/js/app.js'])
+
+        <!-- Plugin-provided theme styles (after app.css so they can override) -->
+        {!! \App\Support\Theme::renderHead() !!}
+        @stack('head')
     </head>
     <body class="font-sans antialiased">
         <div class="relative min-h-screen bg-gradient-to-b from-slate-50 via-indigo-50/40 to-slate-100 dark:from-[#0a0a12] dark:via-[#0c0b18] dark:to-[#08080f]">
