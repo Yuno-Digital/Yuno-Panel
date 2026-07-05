@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Models\Server;
 use App\Models\Webhook;
 use Illuminate\Support\Facades\Http;
 use Throwable;
@@ -12,16 +13,23 @@ use Throwable;
 class Webhooks
 {
     /**
-     * Fire an event to every active webhook subscribed to it. Delivery happens
-     * after the response is sent so it never blocks the request; each payload is
-     * signed with the webhook's secret (HMAC-SHA256).
+     * Fire an event to every active webhook subscribed to it (global webhooks,
+     * plus the given server's own webhooks). Delivery happens after the response
+     * is sent so it never blocks the request; each payload is signed with the
+     * webhook's secret (HMAC-SHA256).
      *
      * @param  array<string, mixed>  $data
      */
-    public static function dispatch(string $event, array $data = []): void
+    public static function dispatch(string $event, array $data = [], ?Server $server = null): void
     {
         $hooks = Webhook::where('is_active', true)->get()
             ->filter(fn (Webhook $hook) => $hook->subscribesTo($event));
+
+        if ($server !== null) {
+            $serverHooks = $server->webhooks()->where('is_active', true)->get()
+                ->filter(fn ($hook) => $hook->subscribesTo($event));
+            $hooks = $hooks->concat($serverHooks);
+        }
 
         if ($hooks->isEmpty()) {
             return;

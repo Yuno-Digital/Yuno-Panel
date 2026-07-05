@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\ScheduledTask;
 use App\Models\Server;
 use App\Models\ServerActivity;
+use App\Models\ServerWebhook;
 use App\Models\User;
 use App\Notifications\PanelNotification;
 use App\Services\WingsClient;
@@ -49,7 +50,8 @@ class ServerController extends Controller
 
         $server->load(['egg.variables', 'node', 'allocation', 'variables.eggVariable', 'subusers',
             'scheduledTasks' => fn ($q) => $q->orderBy('name'),
-            'activities' => fn ($q) => $q->with('user')->limit(100)]);
+            'activities' => fn ($q) => $q->with('user')->limit(100),
+            'webhooks' => fn ($q) => $q->latest()]);
 
         // What the current user may do here (owner/admin can do everything).
         $user = $request->user();
@@ -58,8 +60,16 @@ class ServerController extends Controller
             ? array_keys(Server::SUBUSER_PERMISSIONS)
             : ($server->subuserPermissions($user) ?? []);
 
-        // Tabs the user is allowed to see (Settings is always available).
-        $tabs = array_values(array_filter(['console', 'files', 'schedules', 'activity', 'startup', 'settings'], fn ($t) => $t === 'settings' || in_array($t, $permissions, true)));
+        // Tabs the user may see: network/settings are always shown, subusers and
+        // webhooks are owner/admin only, the rest need the matching permission.
+        $tabs = array_values(array_filter(
+            ['console', 'files', 'schedules', 'activity', 'network', 'startup', 'subusers', 'webhooks', 'settings'],
+            fn ($t) => match ($t) {
+                'settings', 'network' => true,
+                'subusers', 'webhooks' => $manages,
+                default => in_array($t, $permissions, true),
+            },
+        ));
         $activeTab = in_array($tab, $tabs, true) ? $tab : ($tabs[0] ?? 'settings');
 
         return view('servers.show', compact('server', 'activeTab', 'manages', 'permissions', 'tabs'));
@@ -136,7 +146,7 @@ class ServerController extends Controller
             ));
             Webhooks::dispatch('server.reinstall', [
                 'server' => ['id' => $server->id, 'uuid' => $server->uuid, 'name' => $server->name],
-            ]);
+            ], $server);
         }
 
         return back()->with($ok ? 'status' : 'error',
@@ -160,7 +170,7 @@ class ServerController extends Controller
             Webhooks::dispatch('server.power', [
                 'server' => ['id' => $server->id, 'uuid' => $server->uuid, 'name' => $server->name],
                 'action' => $data['action'],
-            ]);
+            ], $server);
         }
 
         return back()->with($ok ? 'status' : 'error',
@@ -404,6 +414,54 @@ class ServerController extends Controller
         ServerActivity::record($server, 'schedule:deleted', ['name' => $name]);
 
         return redirect()->route('servers.show.tab', [$server, 'schedules'])->with('status', __('Schedule deleted.'));
+    }
+
+    /**
+     * Add a webhook endpoint to the server.
+     */
+    public function storeWebhook(Request $request, Server $server): RedirectResponse
+    {
+        $this->authorizeManage($request, $server);
+
+        $data = $request->validate([
+            'url' => ['required', 'url', 'max:2048'],
+            'events' => ['nullable', 'array'],
+            'events.*' => [Rule::in(array_keys(ServerWebhook::EVENTS))],
+        ]);
+
+        $server->webhooks()->create([
+            'url' => $data['url'],
+            'events' => array_values($data['events'] ?? []),
+            'is_active' => true,
+        ]);
+
+        return redirect()->route('servers.show.tab', [$server, 'webhooks'])->with('status', __('Webhook added.'));
+    }
+
+    /**
+     * Enable or disable a webhook.
+     */
+    public function toggleWebhook(Request $request, Server $server, ServerWebhook $webhook): RedirectResponse
+    {
+        $this->authorizeManage($request, $server);
+        abort_if($webhook->server_id !== $server->id, 404);
+
+        $webhook->update(['is_active' => ! $webhook->is_active]);
+
+        return redirect()->route('servers.show.tab', [$server, 'webhooks'])->with('status', __('Webhook updated.'));
+    }
+
+    /**
+     * Delete a webhook.
+     */
+    public function destroyWebhook(Request $request, Server $server, ServerWebhook $webhook): RedirectResponse
+    {
+        $this->authorizeManage($request, $server);
+        abort_if($webhook->server_id !== $server->id, 404);
+
+        $webhook->delete();
+
+        return redirect()->route('servers.show.tab', [$server, 'webhooks'])->with('status', __('Webhook deleted.'));
     }
 
     /**

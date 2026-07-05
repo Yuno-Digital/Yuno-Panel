@@ -56,6 +56,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/servers/{server}/schedules', [ServerController::class, 'storeSchedule'])->name('servers.schedules.store');
     Route::patch('/servers/{server}/schedules/{schedule}', [ServerController::class, 'toggleSchedule'])->name('servers.schedules.toggle');
     Route::delete('/servers/{server}/schedules/{schedule}', [ServerController::class, 'destroySchedule'])->name('servers.schedules.destroy');
+    Route::post('/servers/{server}/webhooks', [ServerController::class, 'storeWebhook'])->name('servers.webhooks.store');
+    Route::patch('/servers/{server}/webhooks/{webhook}', [ServerController::class, 'toggleWebhook'])->name('servers.webhooks.toggle');
+    Route::delete('/servers/{server}/webhooks/{webhook}', [ServerController::class, 'destroyWebhook'])->name('servers.webhooks.destroy');
     // Deep-linkable UI tab, e.g. /servers/5/startup — resolves to the show page.
     Route::get('/servers/{server}/{tab}', [ServerController::class, 'show'])
         ->whereIn('tab', ['console', 'files', 'schedules', 'activity', 'startup', 'settings'])->name('servers.show.tab');

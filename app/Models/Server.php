@@ -73,6 +73,16 @@ class Server extends Model
     }
 
     /**
+     * Per-server webhook endpoints.
+     *
+     * @return HasMany<ServerWebhook, $this>
+     */
+    public function webhooks(): HasMany
+    {
+        return $this->hasMany(ServerWebhook::class);
+    }
+
+    /**
      * The subuser permissions for a user, or null if they are not a subuser.
      *
      * @return array<int, string>|null

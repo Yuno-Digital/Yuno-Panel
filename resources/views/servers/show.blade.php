@@ -75,7 +75,7 @@
 
             {{-- Tabs --}}
             <nav class="inline-flex items-center gap-1 rounded-xl bg-gray-100 dark:bg-gray-800/80 p-1.5 ring-1 ring-gray-200 dark:ring-gray-700">
-                @php $tabLabels = ['console' => __('Console'), 'files' => __('Files'), 'schedules' => __('Schedules'), 'activity' => __('Activity'), 'startup' => __('Startup'), 'settings' => __('Settings')]; @endphp
+                @php $tabLabels = ['console' => __('Console'), 'files' => __('Files'), 'schedules' => __('Schedules'), 'activity' => __('Activity'), 'network' => __('Network'), 'subusers' => __('Subusers'), 'webhooks' => __('Webhooks'), 'startup' => __('Startup'), 'settings' => __('Settings')]; @endphp
                 @foreach ($tabs as $key)
                     @php $label = $tabLabels[$key]; @endphp
                     <button type="button" @click="tab = '{{ $key }}'"
@@ -375,6 +375,152 @@
                 </div>
             </div>
 
+            {{-- Network --}}
+            @if (in_array('network', $tabs))
+                <div x-show="tab === 'network'" x-cloak class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6">
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100">{{ __('Network') }}</h3>
+                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ __('The address players use to connect to this server. Allocations are managed by an admin on the node.') }}</p>
+
+                    @if ($server->allocation)
+                        <div class="mt-5 flex flex-wrap items-center gap-4" x-data="{ copied: false }">
+                            <div class="rounded-xl bg-gray-50 dark:bg-gray-900/60 ring-1 ring-gray-200 dark:ring-gray-700 px-5 py-4">
+                                <p class="text-xs text-gray-500 dark:text-gray-400">{{ __('Primary address') }}</p>
+                                <p class="mt-1 font-mono text-xl font-semibold text-gray-900 dark:text-gray-100">{{ $server->allocation->address() }}</p>
+                            </div>
+                            <button type="button" @click="navigator.clipboard.writeText('{{ $server->allocation->address() }}'); copied = true; setTimeout(() => copied = false, 1500)"
+                                    class="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg bg-white/70 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-sm font-semibold text-gray-700 dark:text-gray-200 hover:bg-white dark:hover:bg-white/10">
+                                <span x-text="copied ? '{{ __('Copied') }}' : '{{ __('Copy') }}'"></span>
+                            </button>
+                        </div>
+                        <dl class="mt-5 grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-4 text-sm">
+                            <div><dt class="text-gray-500 dark:text-gray-400">{{ __('IP') }}</dt><dd class="mt-0.5 font-mono text-gray-900 dark:text-gray-100">{{ $server->allocation->ip }}</dd></div>
+                            <div><dt class="text-gray-500 dark:text-gray-400">{{ __('Port') }}</dt><dd class="mt-0.5 font-mono text-gray-900 dark:text-gray-100">{{ $server->allocation->port }}</dd></div>
+                            <div><dt class="text-gray-500 dark:text-gray-400">{{ __('Node') }}</dt><dd class="mt-0.5 font-medium text-gray-900 dark:text-gray-100">{{ $server->node?->name ?? '—' }}</dd></div>
+                        </dl>
+                    @else
+                        <div class="mt-5 text-sm text-gray-500 dark:text-gray-400">{{ __('No allocation assigned yet.') }}</div>
+                    @endif
+                </div>
+            @endif
+
+            {{-- Subusers (owner/admin only) --}}
+            @if (in_array('subusers', $tabs))
+                <div x-show="tab === 'subusers'" x-cloak class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6">
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100">{{ __('Subusers') }}</h3>
+                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ __('Give other users access to this server with specific permissions.') }}</p>
+
+                    @if ($server->subusers->isNotEmpty())
+                        <ul class="mt-4 divide-y divide-gray-100 dark:divide-gray-700">
+                            @foreach ($server->subusers as $sub)
+                                <li class="py-3 flex items-start justify-between gap-4">
+                                    <div class="min-w-0">
+                                        <p class="text-sm font-medium text-gray-800 dark:text-gray-100">{{ $sub->name }} <span class="text-gray-400 font-normal">· {{ $sub->email }}</span></p>
+                                        <div class="mt-1 flex flex-wrap gap-1">
+                                            @foreach (($sub->pivot->permissions ?? []) as $perm)
+                                                <span class="inline-flex px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300 font-mono">{{ $perm }}</span>
+                                            @endforeach
+                                            @if (empty($sub->pivot->permissions))
+                                                <span class="text-xs text-gray-400">{{ __('no permissions') }}</span>
+                                            @endif
+                                        </div>
+                                    </div>
+                                    <form method="POST" action="{{ route('servers.subusers.destroy', [$server, $sub]) }}"
+                                          data-confirm="Remove this subuser's access?" data-confirm-button="Remove">
+                                        @csrf @method('DELETE')
+                                        <button class="text-sm text-red-600 hover:underline shrink-0">{{ __('Remove') }}</button>
+                                    </form>
+                                </li>
+                            @endforeach
+                        </ul>
+                    @endif
+
+                    <form method="POST" action="{{ route('servers.subusers.store', $server) }}" class="mt-5 space-y-4 border-t border-gray-100 dark:border-gray-700 pt-5">
+                        @csrf
+                        <div>
+                            <x-input-label for="sub_email" :value="__('Add user by email')" />
+                            <x-text-input id="sub_email" name="email" type="email" class="mt-1 block w-full" placeholder="user@example.com" required />
+                            <x-input-error :messages="$errors->get('email')" class="mt-2" />
+                        </div>
+                        <div>
+                            <x-input-label :value="__('Permissions')" />
+                            <div class="mt-2 grid gap-2 sm:grid-cols-2">
+                                @foreach (\App\Models\Server::SUBUSER_PERMISSIONS as $key => $label)
+                                    <label class="flex items-center gap-2">
+                                        <input type="checkbox" name="permissions[]" value="{{ $key }}"
+                                               class="rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-indigo-600 dark:checked:bg-indigo-500 focus:ring-indigo-500">
+                                        <span class="text-sm text-gray-700 dark:text-gray-300">{{ __($label) }}</span>
+                                    </label>
+                                @endforeach
+                            </div>
+                        </div>
+                        <x-primary-button>{{ __('Add subuser') }}</x-primary-button>
+                    </form>
+                </div>
+            @endif
+
+            {{-- Webhooks (owner/admin only) --}}
+            @if (in_array('webhooks', $tabs))
+                <div x-show="tab === 'webhooks'" x-cloak class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6">
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100">{{ __('Webhooks') }}</h3>
+                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ __('POST this server\'s events to your own endpoints. Payloads are signed with a per-webhook secret (header X-Yuno-Signature).') }}</p>
+
+                    @if ($server->webhooks->isNotEmpty())
+                        <ul class="mt-4 divide-y divide-gray-100 dark:divide-gray-700">
+                            @foreach ($server->webhooks as $hook)
+                                <li class="py-3 flex items-start justify-between gap-4">
+                                    <div class="min-w-0">
+                                        <p class="text-sm font-mono text-gray-800 dark:text-gray-100 truncate">{{ $hook->url }}
+                                            @unless ($hook->is_active)
+                                                <span class="ml-1 inline-flex px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300">{{ __('Paused') }}</span>
+                                            @endunless
+                                        </p>
+                                        <div class="mt-1 flex flex-wrap gap-1">
+                                            @foreach (($hook->events ?? []) as $ev)
+                                                <span class="inline-flex px-2 py-0.5 rounded-full text-xs bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300 font-mono">{{ $ev }}</span>
+                                            @endforeach
+                                        </div>
+                                        <p class="mt-1 text-xs text-gray-400 font-mono">{{ __('Secret:') }} {{ $hook->secret }}</p>
+                                    </div>
+                                    <div class="shrink-0 flex items-center gap-2">
+                                        <form method="POST" action="{{ route('servers.webhooks.toggle', [$server, $hook]) }}">
+                                            @csrf @method('PATCH')
+                                            <button class="text-sm text-gray-600 dark:text-gray-400 hover:underline">{{ $hook->is_active ? __('Pause') : __('Resume') }}</button>
+                                        </form>
+                                        <form method="POST" action="{{ route('servers.webhooks.destroy', [$server, $hook]) }}"
+                                              data-confirm="Delete this webhook?" data-confirm-button="Delete">
+                                            @csrf @method('DELETE')
+                                            <button class="text-sm text-red-600 hover:underline">{{ __('Delete') }}</button>
+                                        </form>
+                                    </div>
+                                </li>
+                            @endforeach
+                        </ul>
+                    @endif
+
+                    <form method="POST" action="{{ route('servers.webhooks.store', $server) }}" class="mt-5 space-y-4 border-t border-gray-100 dark:border-gray-700 pt-5">
+                        @csrf
+                        <div>
+                            <x-input-label for="wh_url" :value="__('Endpoint URL')" />
+                            <x-text-input id="wh_url" name="url" type="url" class="mt-1 block w-full font-mono text-sm" placeholder="https://example.com/hook" required />
+                            <x-input-error :messages="$errors->get('url')" class="mt-2" />
+                        </div>
+                        <div>
+                            <x-input-label :value="__('Events')" />
+                            <div class="mt-2 grid gap-2 sm:grid-cols-2">
+                                @foreach (\App\Models\ServerWebhook::EVENTS as $key => $label)
+                                    <label class="flex items-center gap-2">
+                                        <input type="checkbox" name="events[]" value="{{ $key }}"
+                                               class="rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-indigo-600 dark:checked:bg-indigo-500 focus:ring-indigo-500">
+                                        <span class="text-sm text-gray-700 dark:text-gray-300">{{ __($label) }}</span>
+                                    </label>
+                                @endforeach
+                            </div>
+                        </div>
+                        <x-primary-button>{{ __('Add webhook') }}</x-primary-button>
+                    </form>
+                </div>
+            @endif
+
             {{-- Startup --}}
             <div x-show="tab === 'startup'" x-cloak class="space-y-6"
                  x-data="startupEditor({
@@ -464,61 +610,6 @@
                         @endforeach
                     </dl>
                 </div>
-
-                {{-- Subusers (owner/admin only) --}}
-                @if ($manages)
-                    <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6">
-                        <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100">{{ __('Subusers') }}</h3>
-                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ __('Give other users access to this server with specific permissions.') }}</p>
-
-                        @if ($server->subusers->isNotEmpty())
-                            <ul class="mt-4 divide-y divide-gray-100 dark:divide-gray-700">
-                                @foreach ($server->subusers as $sub)
-                                    <li class="py-3 flex items-start justify-between gap-4">
-                                        <div class="min-w-0">
-                                            <p class="text-sm font-medium text-gray-800 dark:text-gray-100">{{ $sub->name }} <span class="text-gray-400 font-normal">· {{ $sub->email }}</span></p>
-                                            <div class="mt-1 flex flex-wrap gap-1">
-                                                @foreach (($sub->pivot->permissions ?? []) as $perm)
-                                                    <span class="inline-flex px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300 font-mono">{{ $perm }}</span>
-                                                @endforeach
-                                                @if (empty($sub->pivot->permissions))
-                                                    <span class="text-xs text-gray-400">{{ __('no permissions') }}</span>
-                                                @endif
-                                            </div>
-                                        </div>
-                                        <form method="POST" action="{{ route('servers.subusers.destroy', [$server, $sub]) }}"
-                                              data-confirm="Remove this subuser's access?" data-confirm-button="Remove">
-                                            @csrf @method('DELETE')
-                                            <button class="text-sm text-red-600 hover:underline shrink-0">{{ __('Remove') }}</button>
-                                        </form>
-                                    </li>
-                                @endforeach
-                            </ul>
-                        @endif
-
-                        <form method="POST" action="{{ route('servers.subusers.store', $server) }}" class="mt-5 space-y-4 border-t border-gray-100 dark:border-gray-700 pt-5">
-                            @csrf
-                            <div>
-                                <x-input-label for="sub_email" :value="__('Add user by email')" />
-                                <x-text-input id="sub_email" name="email" type="email" class="mt-1 block w-full" placeholder="user@example.com" required />
-                                <x-input-error :messages="$errors->get('email')" class="mt-2" />
-                            </div>
-                            <div>
-                                <x-input-label :value="__('Permissions')" />
-                                <div class="mt-2 grid gap-2 sm:grid-cols-2">
-                                    @foreach (\App\Models\Server::SUBUSER_PERMISSIONS as $key => $label)
-                                        <label class="flex items-center gap-2">
-                                            <input type="checkbox" name="permissions[]" value="{{ $key }}"
-                                                   class="rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-indigo-600 dark:checked:bg-indigo-500 focus:ring-indigo-500">
-                                            <span class="text-sm text-gray-700 dark:text-gray-300">{{ __($label) }}</span>
-                                        </label>
-                                    @endforeach
-                                </div>
-                            </div>
-                            <x-primary-button>{{ __('Add subuser') }}</x-primary-button>
-                        </form>
-                    </div>
-                @endif
 
                 {{-- Reinstall --}}
                 @if (in_array('reinstall', $permissions))
