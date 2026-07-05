@@ -26,6 +26,7 @@ class Server extends Model
         'power' => 'Start / stop / restart',
         'files' => 'Manage files',
         'schedules' => 'Manage scheduled tasks',
+        'activity' => 'View the activity log',
         'startup' => 'Edit startup & variables',
         'reinstall' => 'Reinstall the server',
     ];
@@ -59,6 +60,16 @@ class Server extends Model
     public function scheduledTasks(): HasMany
     {
         return $this->hasMany(ScheduledTask::class);
+    }
+
+    /**
+     * Audit-log entries for this server, newest first.
+     *
+     * @return HasMany<ServerActivity, $this>
+     */
+    public function activities(): HasMany
+    {
+        return $this->hasMany(ServerActivity::class)->latest();
     }
 
     /**

@@ -75,7 +75,7 @@
 
             {{-- Tabs --}}
             <nav class="inline-flex items-center gap-1 rounded-xl bg-gray-100 dark:bg-gray-800/80 p-1.5 ring-1 ring-gray-200 dark:ring-gray-700">
-                @php $tabLabels = ['console' => __('Console'), 'files' => __('Files'), 'schedules' => __('Schedules'), 'startup' => __('Startup'), 'settings' => __('Settings')]; @endphp
+                @php $tabLabels = ['console' => __('Console'), 'files' => __('Files'), 'schedules' => __('Schedules'), 'activity' => __('Activity'), 'startup' => __('Startup'), 'settings' => __('Settings')]; @endphp
                 @foreach ($tabs as $key)
                     @php $label = $tabLabels[$key]; @endphp
                     <button type="button" @click="tab = '{{ $key }}'"
@@ -237,6 +237,33 @@
                             </div>
                         </form>
                     </div>
+                </div>
+            @endif
+
+            {{-- Activity log --}}
+            @if (in_array('activity', $tabs))
+                <div x-show="tab === 'activity'" x-cloak class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg overflow-hidden">
+                    @if ($server->activities->isEmpty())
+                        <div class="p-6 text-sm text-gray-500 dark:text-gray-400">{{ __('No activity recorded yet.') }}</div>
+                    @else
+                        <ul class="divide-y divide-gray-100 dark:divide-gray-700">
+                            @foreach ($server->activities as $activity)
+                                <li class="flex items-start gap-3 px-5 py-3">
+                                    <span class="mt-1 grid place-items-center w-7 h-7 shrink-0 rounded-lg bg-gradient-to-br from-brand-500/15 to-fuchsia-500/15 text-brand-600 dark:text-brand-300 text-xs font-bold">
+                                        {{ strtoupper(substr($activity->user?->name ?? 'S', 0, 1)) }}
+                                    </span>
+                                    <div class="min-w-0 flex-1">
+                                        <p class="text-sm text-gray-800 dark:text-gray-100">{{ $activity->describe() }}</p>
+                                        <p class="mt-0.5 text-xs text-gray-400">
+                                            {{ $activity->user?->name ?? __('Scheduler') }}
+                                            @if ($activity->ip_address) · <span class="font-mono">{{ $activity->ip_address }}</span> @endif
+                                            · <span title="{{ $activity->created_at }}">{{ $activity->created_at->diffForHumans() }}</span>
+                                        </p>
+                                    </div>
+                                </li>
+                            @endforeach
+                        </ul>
+                    @endif
                 </div>
             @endif
 

@@ -58,7 +58,7 @@ Route::middleware('auth')->group(function () {
     Route::delete('/servers/{server}/schedules/{schedule}', [ServerController::class, 'destroySchedule'])->name('servers.schedules.destroy');
     // Deep-linkable UI tab, e.g. /servers/5/startup — resolves to the show page.
     Route::get('/servers/{server}/{tab}', [ServerController::class, 'show'])
-        ->whereIn('tab', ['console', 'files', 'schedules', 'startup', 'settings'])->name('servers.show.tab');
+        ->whereIn('tab', ['console', 'files', 'schedules', 'activity', 'startup', 'settings'])->name('servers.show.tab');
 
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
     Route::post('/notifications/read', [NotificationController::class, 'markRead'])->name('notifications.read');

@@ -65,6 +65,10 @@ class ScheduledTask extends Model
             report($e);
         }
 
+        if ($this->server !== null) {
+            ServerActivity::record($this->server, 'schedule:ran', ['name' => $this->name], null);
+        }
+
         $this->forceFill([
             'last_run_at' => now(),
             'next_run_at' => $this->computeNextRun(),
