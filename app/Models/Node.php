@@ -47,6 +47,7 @@ class Node extends Model
             'docker_prefix' => 'yuno',
             'disk_path' => '/',
             'data_path' => '/var/lib/yuno/servers',
+            'backup_path' => '/var/lib/yuno/backups',
         ];
     }
 

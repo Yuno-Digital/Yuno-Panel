@@ -6,6 +6,7 @@ use App\Models\Node;
 use App\Models\Server;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Http;
+use Psr\Http\Message\StreamInterface;
 use Throwable;
 
 /**
@@ -262,6 +263,65 @@ class WingsClient
             return $this->daemon($server)->post($this->url($server, '/files/delete'), ['paths' => array_values($paths)])->successful();
         } catch (Throwable) {
             return false;
+        }
+    }
+
+    /**
+     * Create a backup on the node. Returns {bytes, checksum} or null on failure.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function createBackup(Server $server, string $backupUuid): ?array
+    {
+        try {
+            $response = $this->daemon($server)->timeout(900)
+                ->post($this->url($server, '/backups'), ['backup_uuid' => $backupUuid]);
+
+            return $response->successful() ? $response->json() : null;
+        } catch (Throwable) {
+            return null;
+        }
+    }
+
+    /**
+     * Restore a backup into the server's files.
+     */
+    public function restoreBackup(Server $server, string $backupUuid): bool
+    {
+        try {
+            return $this->daemon($server)->timeout(900)
+                ->post($this->url($server, '/backups/'.$backupUuid.'/restore'))->successful();
+        } catch (Throwable) {
+            return false;
+        }
+    }
+
+    /**
+     * Delete a backup archive on the node.
+     */
+    public function deleteBackup(Server $server, string $backupUuid): bool
+    {
+        try {
+            return $this->daemon($server)->delete($this->url($server, '/backups/'.$backupUuid))->successful();
+        } catch (Throwable) {
+            return false;
+        }
+    }
+
+    /**
+     * A streamable PSR response body for downloading a backup, or null.
+     */
+    public function backupDownloadStream(Server $server, string $backupUuid): ?StreamInterface
+    {
+        try {
+            $response = Http::withToken((string) $server->node?->daemon_token)
+                ->withOptions(['stream' => true])
+                ->timeout(900)
+                ->get($this->url($server, '/backups/'.$backupUuid.'/download'));
+
+            return $response->successful() ? $response->toPsrResponse()->getBody() : null;
+        } catch (Throwable) {
+            return null;
         }
     }
 

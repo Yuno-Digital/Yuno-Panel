@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Backup;
 use App\Models\DatabaseHost;
 use App\Models\ScheduledTask;
 use App\Models\Server;
@@ -18,6 +19,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use Throwable;
@@ -56,7 +58,8 @@ class ServerController extends Controller
             'scheduledTasks' => fn ($q) => $q->orderBy('name'),
             'activities' => fn ($q) => $q->with('user')->limit(100),
             'webhooks' => fn ($q) => $q->latest(),
-            'databases' => fn ($q) => $q->with('host')->latest()]);
+            'databases' => fn ($q) => $q->with('host')->latest(),
+            'backups' => fn ($q) => $q->latest()]);
 
         // What the current user may do here (owner/admin can do everything).
         $user = $request->user();
@@ -68,7 +71,7 @@ class ServerController extends Controller
         // Tabs the user may see: network/settings are always shown, subusers and
         // webhooks are owner/admin only, the rest need the matching permission.
         $tabs = array_values(array_filter(
-            ['console', 'files', 'databases', 'schedules', 'activity', 'network', 'startup', 'subusers', 'webhooks', 'settings'],
+            ['console', 'files', 'databases', 'backups', 'schedules', 'activity', 'network', 'startup', 'subusers', 'webhooks', 'settings'],
             fn ($t) => match ($t) {
                 'settings', 'network' => true,
                 'subusers', 'webhooks' => $manages,
@@ -538,6 +541,95 @@ class ServerController extends Controller
         ServerActivity::record($server, 'database:deleted', ['name' => $name]);
 
         return redirect()->route('servers.show.tab', [$server, 'databases'])->with('status', __('Database deleted.'));
+    }
+
+    /**
+     * Create a backup (archive the server's files on its node).
+     */
+    public function storeBackup(Request $request, Server $server): RedirectResponse
+    {
+        $this->authorizeServer($request, $server, 'backups');
+
+        $limit = (int) config('yuno.backup_limit');
+        if ($limit > 0 && $server->backups()->count() >= $limit) {
+            return back()->with('error', __('Backup limit reached (:n). Delete one first.', ['n' => $limit]));
+        }
+
+        $data = $request->validate(['name' => ['nullable', 'string', 'max:255']]);
+
+        $backup = $server->backups()->create([
+            'uuid' => (string) Str::uuid(),
+            'name' => $data['name'] ?: __('Backup :d', ['d' => now()->format('Y-m-d H:i')]),
+            'is_successful' => false,
+        ]);
+
+        $result = $this->wings->createBackup($server->load('node'), $backup->uuid);
+        if ($result === null) {
+            $backup->delete();
+
+            return back()->with('error', __('Could not reach the node to create the backup.'));
+        }
+
+        $backup->update([
+            'bytes' => (int) ($result['bytes'] ?? 0),
+            'checksum' => $result['checksum'] ?? null,
+            'is_successful' => true,
+            'completed_at' => now(),
+        ]);
+        ServerActivity::record($server, 'backup:created', ['name' => $backup->name]);
+
+        return redirect()->route('servers.show.tab', [$server, 'backups'])->with('status', __('Backup created.'));
+    }
+
+    /**
+     * Restore a backup into the server (server should be stopped first).
+     */
+    public function restoreBackup(Request $request, Server $server, Backup $backup): RedirectResponse
+    {
+        $this->authorizeServer($request, $server, 'backups');
+        abort_if($backup->server_id !== $server->id, 404);
+
+        if (! $this->wings->restoreBackup($server->load('node'), $backup->uuid)) {
+            return back()->with('error', __('Could not restore the backup. Is the node reachable?'));
+        }
+        ServerActivity::record($server, 'backup:restored', ['name' => $backup->name]);
+
+        return redirect()->route('servers.show.tab', [$server, 'backups'])->with('status', __('Backup restored.'));
+    }
+
+    /**
+     * Stream a backup download (proxied from the node through the panel).
+     */
+    public function downloadBackup(Request $request, Server $server, Backup $backup): mixed
+    {
+        $this->authorizeServer($request, $server, 'backups');
+        abort_if($backup->server_id !== $server->id, 404);
+
+        $stream = $this->wings->backupDownloadStream($server->load('node'), $backup->uuid);
+        abort_if($stream === null, 502, 'Could not fetch the backup from the node.');
+
+        return response()->streamDownload(function () use ($stream) {
+            while (! $stream->eof()) {
+                echo $stream->read(262144);
+                flush();
+            }
+        }, Str::slug($backup->name).'.tar.gz', ['Content-Type' => 'application/gzip']);
+    }
+
+    /**
+     * Delete a backup (archive on the node + record).
+     */
+    public function destroyBackup(Request $request, Server $server, Backup $backup): RedirectResponse
+    {
+        $this->authorizeServer($request, $server, 'backups');
+        abort_if($backup->server_id !== $server->id, 404);
+
+        $this->wings->deleteBackup($server->load('node'), $backup->uuid);
+        $name = $backup->name;
+        $backup->delete();
+        ServerActivity::record($server, 'backup:deleted', ['name' => $name]);
+
+        return redirect()->route('servers.show.tab', [$server, 'backups'])->with('status', __('Backup deleted.'));
     }
 
     /**

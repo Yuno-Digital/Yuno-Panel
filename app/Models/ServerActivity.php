@@ -79,6 +79,9 @@ class ServerActivity extends Model
             'schedule:ran' => __('Ran schedule ":n"', ['n' => $p['name'] ?? '']),
             'database:created' => __('Created database :n', ['n' => $p['name'] ?? '']),
             'database:deleted' => __('Deleted database :n', ['n' => $p['name'] ?? '']),
+            'backup:created' => __('Created backup ":n"', ['n' => $p['name'] ?? '']),
+            'backup:restored' => __('Restored backup ":n"', ['n' => $p['name'] ?? '']),
+            'backup:deleted' => __('Deleted backup ":n"', ['n' => $p['name'] ?? '']),
             default => $this->event,
         };
     }

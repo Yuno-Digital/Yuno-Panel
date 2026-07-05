@@ -75,7 +75,7 @@
 
             {{-- Tabs --}}
             <nav class="inline-flex items-center gap-1 rounded-xl bg-gray-100 dark:bg-gray-800/80 p-1.5 ring-1 ring-gray-200 dark:ring-gray-700">
-                @php $tabLabels = ['console' => __('Console'), 'files' => __('Files'), 'databases' => __('Databases'), 'schedules' => __('Schedules'), 'activity' => __('Activity'), 'network' => __('Network'), 'subusers' => __('Subusers'), 'webhooks' => __('Webhooks'), 'startup' => __('Startup'), 'settings' => __('Settings')]; @endphp
+                @php $tabLabels = ['console' => __('Console'), 'files' => __('Files'), 'databases' => __('Databases'), 'backups' => __('Backups'), 'schedules' => __('Schedules'), 'activity' => __('Activity'), 'network' => __('Network'), 'subusers' => __('Subusers'), 'webhooks' => __('Webhooks'), 'startup' => __('Startup'), 'settings' => __('Settings')]; @endphp
                 @foreach ($tabs as $key)
                     @php $label = $tabLabels[$key]; @endphp
                     <button type="button" @click="tab = '{{ $key }}'"
@@ -374,6 +374,55 @@
                     </div>
                 </div>
             </div>
+
+            {{-- Backups --}}
+            @if (in_array('backups', $tabs))
+                <div x-show="tab === 'backups'" x-cloak class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6">
+                    <div class="flex items-start justify-between gap-4">
+                        <div>
+                            <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100">{{ __('Backups') }}</h3>
+                            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ __('Snapshots of your server files, stored on the node.') }} @php $lim = (int) config('yuno.backup_limit'); @endphp @if ($lim) <span class="text-gray-400">({{ $server->backups->count() }}/{{ $lim }})</span> @endif</p>
+                        </div>
+                        <form method="POST" action="{{ route('servers.backups.store', $server) }}"
+                              data-confirm="Create a backup now? This can take a while for large servers." data-confirm-button="Create" data-confirm-icon="question">
+                            @csrf
+                            <x-primary-button>{{ __('Create backup') }}</x-primary-button>
+                        </form>
+                    </div>
+
+                    @if ($server->backups->isEmpty())
+                        <div class="mt-5 text-sm text-gray-500 dark:text-gray-400">{{ __('No backups yet.') }}</div>
+                    @else
+                        <ul class="mt-4 divide-y divide-gray-100 dark:divide-gray-700">
+                            @foreach ($server->backups as $backup)
+                                <li class="py-3 flex items-center justify-between gap-4">
+                                    <div class="min-w-0">
+                                        <p class="text-sm font-medium text-gray-800 dark:text-gray-100 truncate">{{ $backup->name }}</p>
+                                        <p class="mt-0.5 text-xs text-gray-400">
+                                            {{ \App\Support\Format::size(intdiv($backup->bytes, 1048576)) }}
+                                            · <span title="{{ $backup->completed_at }}">{{ $backup->created_at->diffForHumans() }}</span>
+                                            @if ($backup->checksum) · <span class="font-mono">{{ substr($backup->checksum, 0, 10) }}…</span> @endif
+                                        </p>
+                                    </div>
+                                    <div class="shrink-0 flex items-center gap-3">
+                                        <a href="{{ route('servers.backups.download', [$server, $backup]) }}" class="text-sm text-indigo-600 hover:underline">{{ __('Download') }}</a>
+                                        <form method="POST" action="{{ route('servers.backups.restore', [$server, $backup]) }}"
+                                              data-confirm="Restore this backup? Current files are overwritten. Stop the server first." data-confirm-button="Restore" data-confirm-icon="warning">
+                                            @csrf
+                                            <button class="text-sm text-gray-600 dark:text-gray-400 hover:underline">{{ __('Restore') }}</button>
+                                        </form>
+                                        <form method="POST" action="{{ route('servers.backups.destroy', [$server, $backup]) }}"
+                                              data-confirm="Delete this backup?" data-confirm-button="Delete">
+                                            @csrf @method('DELETE')
+                                            <button class="text-sm text-red-600 hover:underline">{{ __('Delete') }}</button>
+                                        </form>
+                                    </div>
+                                </li>
+                            @endforeach
+                        </ul>
+                    @endif
+                </div>
+            @endif
 
             {{-- Databases --}}
             @if (in_array('databases', $tabs))

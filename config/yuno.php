@@ -18,6 +18,11 @@ return [
     'wings_repository' => env('YUNO_WINGS_REPOSITORY', 'Yuno-Digital/Yuno-Panel-Wings'),
 
     /*
+     * Maximum number of backups a server may keep.
+     */
+    'backup_limit' => (int) env('YUNO_BACKUP_LIMIT', 5),
+
+    /*
      * Plugins repository (owner/name and branch) browsed by the in-panel
      * plugin installer.
      */
