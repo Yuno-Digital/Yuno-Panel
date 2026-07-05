@@ -1,12 +1,15 @@
-<nav x-data="{ open: false }" class="bg-white dark:bg-gray-800 border-b border-gray-100">
+<nav x-data="{ open: false }" class="sticky top-0 z-40 glass border-b border-white/50 dark:border-white/5">
     <!-- Primary Navigation Menu -->
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between h-16">
             <div class="flex">
                 <!-- Logo -->
                 <div class="shrink-0 flex items-center">
-                    <a href="{{ route('dashboard') }}">
-                        <x-application-logo class="block h-9 w-auto fill-current text-gray-800 dark:text-gray-100" />
+                    <a href="{{ route('dashboard') }}" class="flex items-center gap-2.5 group">
+                        <span class="grid place-items-center w-9 h-9 rounded-xl bg-gradient-to-br from-brand-500 to-fuchsia-500 shadow-glow transition-transform duration-300 group-hover:scale-105">
+                            <x-application-logo class="h-5 w-5 fill-current text-white" />
+                        </span>
+                        <span class="hidden sm:block text-lg font-extrabold tracking-tight text-gradient">{{ config('app.name', 'Yuno') }}</span>
                     </a>
                 </div>
 
@@ -41,9 +44,9 @@
                             @php $isActive = request()->routeIs($link['pattern']); @endphp
                             <a href="{{ route($link['route']) }}"
                                @class([
-                                   'group inline-flex items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-semibold tracking-tight transition-all duration-150',
-                                   'bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-300 shadow-sm ring-1 ring-black/5' => $isActive,
-                                   'text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200' => ! $isActive,
+                                   'group inline-flex items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-semibold tracking-tight transition-all duration-200',
+                                   'bg-gradient-to-r from-brand-500 to-fuchsia-500 text-white shadow-glow' => $isActive,
+                                   'text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-100 hover:bg-white/60 dark:hover:bg-white/5' => ! $isActive,
                                ])>
                                 <svg class="w-[18px] h-[18px]" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="{{ $link['icon'] }}" />

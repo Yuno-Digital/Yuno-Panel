@@ -25,21 +25,26 @@
 
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">{{ __($title) }}</h2>
+        <h2 class="font-bold text-xl leading-tight text-gray-900 dark:text-gray-100">{{ __($title) }}</h2>
     </x-slot>
 
     <div class="py-8">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 flex flex-col md:flex-row gap-6">
             <aside class="md:w-56 shrink-0">
-                <nav class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-3 space-y-4">
+                <nav class="glass ring-1 ring-white/50 dark:ring-white/5 shadow-sm rounded-2xl p-3 space-y-4 md:sticky md:top-20">
                     @foreach ($groups as $group => $items)
                         <div>
-                            <p class="px-3 mb-1 text-xs font-semibold uppercase tracking-wider text-gray-400">{{ $group }}</p>
+                            <p class="px-3 mb-1 text-[11px] font-semibold uppercase tracking-wider text-gray-400">{{ $group }}</p>
                             <ul class="space-y-1">
                                 @foreach ($items as $item)
+                                    @php $active = request()->routeIs($item['pattern']); @endphp
                                     <li>
                                         <a href="{{ route($item['route']) }}"
-                                           class="block px-3 py-2 rounded-md text-sm font-medium {{ request()->routeIs($item['pattern']) ? 'bg-indigo-600 text-white' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700' }}">
+                                           @class([
+                                               'block px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200',
+                                               'bg-gradient-to-r from-brand-500 to-fuchsia-500 text-white shadow-glow' => $active,
+                                               'text-gray-600 dark:text-gray-300 hover:bg-white/70 dark:hover:bg-white/5 hover:translate-x-0.5' => ! $active,
+                                           ])>
                                             {{ __($item['label']) }}
                                         </a>
                                     </li>
@@ -50,7 +55,7 @@
                 </nav>
             </aside>
 
-            <main class="flex-1 min-w-0">
+            <main class="flex-1 min-w-0 animate-fade-in-up">
                 @include('admin.partials.flash')
                 {{ $slot }}
             </main>
