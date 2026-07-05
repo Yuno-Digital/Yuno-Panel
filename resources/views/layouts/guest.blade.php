@@ -33,6 +33,8 @@
                 </div>
 
                 <p class="mt-6 text-xs text-gray-400 dark:text-gray-500 animate-fade-in delay-300">{{ __('Game server management, reimagined.') }}</p>
+
+                @include('partials.footer')
             </div>
         </div>
     </body>
