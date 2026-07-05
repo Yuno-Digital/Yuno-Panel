@@ -83,6 +83,7 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::post('upgrade', [UpgradeController::class, 'run'])->name('upgrade.run');
     Route::get('upgrade/log', [UpgradeController::class, 'log'])->name('upgrade.log');
     Route::post('nodes/{node}/refresh', [AdminNodeController::class, 'refresh'])->name('nodes.refresh');
+    Route::post('nodes/{node}/upgrade', [AdminNodeController::class, 'upgrade'])->name('nodes.upgrade');
     Route::post('nodes/{node}/regenerate-token', [AdminNodeController::class, 'regenerateToken'])->name('nodes.regenerate-token');
     Route::post('nodes/{node}/allocations', [AllocationController::class, 'store'])->name('nodes.allocations.store');
     Route::delete('nodes/{node}/allocations/{allocation}', [AllocationController::class, 'destroy'])->name('nodes.allocations.destroy');

@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 
-#[Fillable(['name', 'fqdn', 'daemon_port', 'daemon_tls', 'daemon_token', 'is_online', 'memory_mb', 'disk_mb', 'description'])]
+#[Fillable(['name', 'fqdn', 'daemon_port', 'daemon_tls', 'daemon_token', 'daemon_version', 'is_online', 'memory_mb', 'disk_mb', 'description'])]
 #[Hidden(['daemon_token'])]
 class Node extends Model
 {

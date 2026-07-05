@@ -16,6 +16,7 @@
                         <th class="px-6 py-3">{{ __('Name') }}</th>
                         <th class="px-6 py-3">{{ __('FQDN') }}</th>
                         <th class="px-6 py-3">{{ __('Status') }}</th>
+                        <th class="px-6 py-3">{{ __('Version') }}</th>
                         <th class="px-6 py-3">{{ __('Servers') }}</th>
                         <th class="px-6 py-3">{{ __('Memory') }}</th>
                         <th class="px-6 py-3">{{ __('Disk') }}</th>
@@ -32,6 +33,7 @@
                                     {{ $node->is_online ? __('Online') : __('Offline') }}
                                 </span>
                             </td>
+                            <td class="px-6 py-4 font-mono text-xs">{{ $node->daemon_version ? 'v'.$node->daemon_version : '—' }}</td>
                             <td class="px-6 py-4">{{ $node->servers_count }}</td>
                             <td class="px-6 py-4">{{ \App\Support\Format::size($node->memory_mb) }}</td>
                             <td class="px-6 py-4">{{ \App\Support\Format::size($node->disk_mb) }}</td>

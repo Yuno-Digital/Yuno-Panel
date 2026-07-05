@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Node;
 use App\Services\WingsClient;
+use App\Services\WingsUpdateChecker;
 use App\Support\Format;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -12,7 +13,10 @@ use Illuminate\View\View;
 
 class NodeController extends Controller
 {
-    public function __construct(private readonly WingsClient $wings) {}
+    public function __construct(
+        private readonly WingsClient $wings,
+        private readonly WingsUpdateChecker $wingsUpdates,
+    ) {}
 
     public function index(): View
     {
@@ -51,7 +55,25 @@ class NodeController extends Controller
     {
         $node->load(['allocations' => fn ($q) => $q->orderBy('ip')->orderBy('port'), 'allocations.server']);
 
-        return view('admin.nodes.edit', compact('node'));
+        return view('admin.nodes.edit', [
+            'node' => $node,
+            'latestDaemon' => $this->wingsUpdates->latestVersion(),
+            'daemonUpdateAvailable' => $this->wingsUpdates->updateAvailable($node->daemon_version),
+        ]);
+    }
+
+    /**
+     * Trigger a self-update on the node's Wings daemon.
+     */
+    public function upgrade(Node $node): RedirectResponse
+    {
+        if (! $this->wings->update($node)) {
+            return redirect()->route('admin.nodes.edit', $node)
+                ->with('error', __('Could not reach the daemon to update it. Is the node online?'));
+        }
+
+        return redirect()->route('admin.nodes.edit', $node)
+            ->with('status', __('Daemon update started — it will pull the latest version and restart (~1 min).'));
     }
 
     public function update(Request $request, Node $node): RedirectResponse
