@@ -35,6 +35,7 @@
     <div class="py-10" x-data="serverConsole({
             wsInfoUrl: '{{ route('servers.ws', $server) }}',
             powerUrl: '{{ route('servers.power', $server) }}',
+            writeUrl: '{{ route('servers.files.write', $server) }}',
             csrf: '{{ csrf_token() }}',
             basePath: '{{ url('servers/'.$server->id) }}',
             tab: '{{ $activeTab }}'
@@ -85,6 +86,29 @@
 
             {{-- Console --}}
             <div x-show="tab === 'console'">
+                {{-- Minecraft EULA prompt (shown when the server asks for EULA agreement) --}}
+                <div x-show="eulaPrompt" x-cloak x-transition
+                     class="mb-3 rounded-xl border border-amber-300 dark:border-amber-700/60 bg-amber-50 dark:bg-amber-900/20 p-4">
+                    <div class="flex items-start gap-3">
+                        <svg class="w-5 h-5 shrink-0 text-amber-500 mt-0.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v4m0 4h.01M10.29 3.86l-8.48 14.7A1.5 1.5 0 003.11 21h17.78a1.5 1.5 0 001.3-2.44l-8.48-14.7a1.5 1.5 0 00-2.42 0z"/></svg>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-semibold text-amber-800 dark:text-amber-200">{{ __('Minecraft EULA') }}</p>
+                            <p class="mt-1 text-sm text-amber-700 dark:text-amber-300">
+                                {{ __('This server needs you to accept the Minecraft EULA before it can start.') }}
+                                <a href="https://aka.ms/MinecraftEULA" target="_blank" rel="noopener" class="font-medium underline hover:no-underline">{{ __('Read the EULA') }}</a>.
+                            </p>
+                            <div class="mt-3 flex items-center gap-3">
+                                <button type="button" @click="acceptEula()" :disabled="eulaBusy"
+                                        class="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg bg-amber-600 text-white text-sm font-semibold shadow-sm hover:bg-amber-700 disabled:opacity-50">
+                                    <svg x-show="eulaBusy" class="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/></svg>
+                                    <span x-text="eulaBusy ? '{{ __('Accepting…') }}' : '{{ __('Accept EULA & start') }}'"></span>
+                                </button>
+                                <button type="button" @click="eulaPrompt = false" class="text-sm font-medium text-amber-700 dark:text-amber-300 hover:underline">{{ __('Dismiss') }}</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <pre x-ref="console" class="h-96 overflow-auto rounded-lg bg-gray-900 text-gray-100 text-xs font-mono p-4 whitespace-pre-wrap" x-text="logs || '{{ __('Waiting for output…') }}'"></pre>
                 <form @submit.prevent="sendCommand()" class="mt-2 flex gap-2">
                     <span class="hidden sm:flex items-center text-gray-400 font-mono text-sm px-2">&gt;</span>
@@ -531,6 +555,7 @@
 
             return {
                 tab: c.tab, stats: { state: 'loading' }, logs: '', commandInput: '',
+                eulaPrompt: false, eulaBusy: false,
                 labels: { running: 'Running', exited: 'Offline', created: 'Installed (stopped)', restarting: 'Restarting', missing: 'Not installed', loading: 'Loading…', unreachable: 'Node unreachable' },
                 get stateLabel() { return this.labels[this.stats.state] || (this.stats.state || 'Unknown'); },
                 get stateColor() {
@@ -601,11 +626,16 @@
                     try { m = JSON.parse(data); } catch (e) { return; }
                     const a = m.args || [];
                     switch (m.event) {
-                        case 'console output':
-                            this.append(this.strip(a[0] || ''));
+                        case 'console output': {
+                            const line = this.strip(a[0] || '');
+                            this.append(line);
+                            // Minecraft asks the user to agree to the EULA on first run.
+                            if (/agree to the EULA/i.test(line)) this.eulaPrompt = true;
                             break;
+                        }
                         case 'status':
                             this.stats = { ...this.stats, state: a[0] };
+                            if (a[0] === 'running') this.eulaPrompt = false;
                             break;
                         case 'stats':
                             try { this.stats = JSON.parse(a[0]); } catch (e) {}
@@ -655,6 +685,27 @@
                     this.commandInput = '';
                     this.append('> ' + cmd + '\n');
                     socket.send(JSON.stringify({ event: 'command', args: [cmd] }));
+                },
+
+                // Write eula.txt with eula=true, then (re)start the server.
+                async acceptEula() {
+                    if (this.eulaBusy) return;
+                    this.eulaBusy = true;
+                    try {
+                        const res = await fetch(c.writeUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': c.csrf },
+                            body: JSON.stringify({ path: 'eula.txt', contents: 'eula=true\n' }),
+                        });
+                        if (!res.ok) throw new Error('write failed');
+                        this.eulaPrompt = false;
+                        window.yunoToast('EULA accepted — starting the server…');
+                        await this.power(this.canStart ? 'start' : 'restart');
+                    } catch (e) {
+                        window.yunoToast('Could not write eula.txt — you may lack file permission.', 'error');
+                    } finally {
+                        this.eulaBusy = false;
+                    }
                 },
             };
         }
