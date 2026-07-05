@@ -7,6 +7,13 @@
 }
 
 @layer base {
+    /* Signature accent — plugins can recolour the whole panel's brand mark and
+       aurora by overriding these in an injected stylesheet. */
+    :root {
+        --yuno-accent-1: #6366f1;
+        --yuno-accent-2: #a855f7;
+        --yuno-accent-3: #ec4899;
+    }
     html {
         scroll-behavior: smooth;
     }
@@ -18,7 +25,7 @@
 @layer utilities {
     /* Gradient text for headings / brand marks */
     .text-gradient {
-        background-image: linear-gradient(120deg, #6366f1, #a855f7 45%, #ec4899);
+        background-image: linear-gradient(120deg, var(--yuno-accent-1), var(--yuno-accent-2) 45%, var(--yuno-accent-3));
         -webkit-background-clip: text;
         background-clip: text;
         color: transparent;
@@ -96,13 +103,13 @@
     opacity: 0.5;
 }
 .aurora::before {
-    background: radial-gradient(circle at 30% 30%, #6366f1, transparent 60%);
+    background: radial-gradient(circle at 30% 30%, var(--yuno-accent-1), transparent 60%);
     top: -12rem;
     left: -8rem;
     animation: float 12s ease-in-out infinite;
 }
 .aurora::after {
-    background: radial-gradient(circle at 70% 70%, #ec4899, transparent 60%);
+    background: radial-gradient(circle at 70% 70%, var(--yuno-accent-3), transparent 60%);
     bottom: -14rem;
     right: -8rem;
     animation: float 16s ease-in-out infinite reverse;
