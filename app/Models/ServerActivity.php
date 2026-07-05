@@ -77,6 +77,8 @@ class ServerActivity extends Model
                 : __('Paused schedule ":n"', ['n' => $p['name'] ?? '']),
             'schedule:deleted' => __('Deleted schedule ":n"', ['n' => $p['name'] ?? '']),
             'schedule:ran' => __('Ran schedule ":n"', ['n' => $p['name'] ?? '']),
+            'database:created' => __('Created database :n', ['n' => $p['name'] ?? '']),
+            'database:deleted' => __('Deleted database :n', ['n' => $p['name'] ?? '']),
             default => $this->event,
         };
     }

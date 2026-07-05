@@ -75,7 +75,7 @@
 
             {{-- Tabs --}}
             <nav class="inline-flex items-center gap-1 rounded-xl bg-gray-100 dark:bg-gray-800/80 p-1.5 ring-1 ring-gray-200 dark:ring-gray-700">
-                @php $tabLabels = ['console' => __('Console'), 'files' => __('Files'), 'schedules' => __('Schedules'), 'activity' => __('Activity'), 'network' => __('Network'), 'subusers' => __('Subusers'), 'webhooks' => __('Webhooks'), 'startup' => __('Startup'), 'settings' => __('Settings')]; @endphp
+                @php $tabLabels = ['console' => __('Console'), 'files' => __('Files'), 'databases' => __('Databases'), 'schedules' => __('Schedules'), 'activity' => __('Activity'), 'network' => __('Network'), 'subusers' => __('Subusers'), 'webhooks' => __('Webhooks'), 'startup' => __('Startup'), 'settings' => __('Settings')]; @endphp
                 @foreach ($tabs as $key)
                     @php $label = $tabLabels[$key]; @endphp
                     <button type="button" @click="tab = '{{ $key }}'"
@@ -374,6 +374,72 @@
                     </div>
                 </div>
             </div>
+
+            {{-- Databases --}}
+            @if (in_array('databases', $tabs))
+                <div x-show="tab === 'databases'" x-cloak class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6">
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100">{{ __('Databases') }}</h3>
+                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ __('MySQL databases for this server. Each gets its own user and password.') }}</p>
+
+                    @if ($server->databases->isNotEmpty())
+                        <div class="mt-4 space-y-3">
+                            @foreach ($server->databases as $db)
+                                <div class="rounded-xl ring-1 ring-gray-200 dark:ring-gray-700 p-4" x-data="{ show: false }">
+                                    <div class="flex items-start justify-between gap-4">
+                                        <p class="font-mono text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">{{ $db->database }}</p>
+                                        <div class="shrink-0 flex items-center gap-3">
+                                            <form method="POST" action="{{ route('servers.databases.rotate', [$server, $db]) }}"
+                                                  data-confirm="Rotate this database's password?" data-confirm-button="Rotate" data-confirm-icon="question">
+                                                @csrf @method('PATCH')
+                                                <button class="text-sm text-gray-600 dark:text-gray-400 hover:underline">{{ __('Rotate password') }}</button>
+                                            </form>
+                                            <form method="POST" action="{{ route('servers.databases.destroy', [$server, $db]) }}"
+                                                  data-confirm="Delete this database? All its data is lost." data-confirm-button="Delete">
+                                                @csrf @method('DELETE')
+                                                <button class="text-sm text-red-600 hover:underline">{{ __('Delete') }}</button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                    <dl class="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-3 text-xs">
+                                        <div><dt class="text-gray-400">{{ __('Host') }}</dt><dd class="mt-0.5 font-mono text-gray-800 dark:text-gray-200">{{ $db->host?->connectHost() }}:{{ $db->host?->port }}</dd></div>
+                                        <div><dt class="text-gray-400">{{ __('Username') }}</dt><dd class="mt-0.5 font-mono text-gray-800 dark:text-gray-200">{{ $db->username }}</dd></div>
+                                        <div><dt class="text-gray-400">{{ __('Remote') }}</dt><dd class="mt-0.5 font-mono text-gray-800 dark:text-gray-200">{{ $db->remote }}</dd></div>
+                                        <div>
+                                            <dt class="text-gray-400">{{ __('Password') }}</dt>
+                                            <dd class="mt-0.5 flex items-center gap-2">
+                                                <span class="font-mono text-gray-800 dark:text-gray-200" x-text="show ? @js($db->password) : '••••••••'"></span>
+                                                <button type="button" @click="show = !show" class="text-indigo-600 hover:underline" x-text="show ? '{{ __('Hide') }}' : '{{ __('Show') }}'"></button>
+                                            </dd>
+                                        </div>
+                                    </dl>
+                                </div>
+                            @endforeach
+                        </div>
+                    @endif
+
+                    @if ($databaseHosts->isEmpty())
+                        <p class="mt-5 text-sm text-amber-600 dark:text-amber-400">{{ __('No database hosts are configured. An admin must add one under Admin → Database Hosts.') }}</p>
+                    @else
+                        <form method="POST" action="{{ route('servers.databases.store', $server) }}" class="mt-5 flex flex-wrap items-end gap-3 border-t border-gray-100 dark:border-gray-700 pt-5">
+                            @csrf
+                            <div>
+                                <x-input-label for="db_host" :value="__('Database host')" />
+                                <select id="db_host" name="database_host_id" class="mt-1 block rounded-lg border-gray-200 dark:border-white/10 dark:bg-gray-900 dark:text-gray-100 focus:border-brand-500 focus:ring-brand-400/40 text-sm">
+                                    @foreach ($databaseHosts as $dh)
+                                        <option value="{{ $dh->id }}">{{ $dh->name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div>
+                                <x-input-label for="db_remote" :value="__('Remote (optional)')" />
+                                <x-text-input id="db_remote" name="remote" type="text" class="mt-1 block w-40 font-mono text-sm" value="%" />
+                            </div>
+                            <x-primary-button>{{ __('Create database') }}</x-primary-button>
+                        </form>
+                        <x-input-error :messages="$errors->get('remote')" class="mt-2" />
+                    @endif
+                </div>
+            @endif
 
             {{-- Network --}}
             @if (in_array('network', $tabs))
