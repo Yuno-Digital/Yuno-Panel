@@ -36,6 +36,8 @@
                 <main class="animate-fade-in-up">
                     {{ $slot }}
                 </main>
+
+                @include('partials.footer')
             </div>
         </div>
     </body>
