@@ -26,6 +26,7 @@ class Server extends Model
         'power' => 'Start / stop / restart',
         'files' => 'Manage files',
         'databases' => 'Manage databases',
+        'backups' => 'Manage backups',
         'schedules' => 'Manage scheduled tasks',
         'activity' => 'View the activity log',
         'startup' => 'Edit startup & variables',
@@ -91,6 +92,16 @@ class Server extends Model
     public function databases(): HasMany
     {
         return $this->hasMany(ServerDatabase::class);
+    }
+
+    /**
+     * Backups of this server.
+     *
+     * @return HasMany<Backup, $this>
+     */
+    public function backups(): HasMany
+    {
+        return $this->hasMany(Backup::class);
     }
 
     /**

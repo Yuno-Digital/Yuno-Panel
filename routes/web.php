@@ -63,9 +63,13 @@ Route::middleware('auth')->group(function () {
     Route::post('/servers/{server}/databases', [ServerController::class, 'storeDatabase'])->name('servers.databases.store');
     Route::patch('/servers/{server}/databases/{database}', [ServerController::class, 'rotateDatabase'])->name('servers.databases.rotate');
     Route::delete('/servers/{server}/databases/{database}', [ServerController::class, 'destroyDatabase'])->name('servers.databases.destroy');
+    Route::post('/servers/{server}/backups', [ServerController::class, 'storeBackup'])->name('servers.backups.store');
+    Route::get('/servers/{server}/backups/{backup}/download', [ServerController::class, 'downloadBackup'])->name('servers.backups.download');
+    Route::post('/servers/{server}/backups/{backup}/restore', [ServerController::class, 'restoreBackup'])->name('servers.backups.restore');
+    Route::delete('/servers/{server}/backups/{backup}', [ServerController::class, 'destroyBackup'])->name('servers.backups.destroy');
     // Deep-linkable UI tab, e.g. /servers/5/startup — resolves to the show page.
     Route::get('/servers/{server}/{tab}', [ServerController::class, 'show'])
-        ->whereIn('tab', ['console', 'files', 'databases', 'schedules', 'activity', 'network', 'startup', 'subusers', 'webhooks', 'settings'])->name('servers.show.tab');
+        ->whereIn('tab', ['console', 'files', 'databases', 'backups', 'schedules', 'activity', 'network', 'startup', 'subusers', 'webhooks', 'settings'])->name('servers.show.tab');
 
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
     Route::post('/notifications/read', [NotificationController::class, 'markRead'])->name('notifications.read');
