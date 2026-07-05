@@ -33,13 +33,23 @@
                             <p class="mt-1 text-xs text-gray-400">
                                 <span class="font-mono">{{ $plugin['id'] }}</span>@if (! empty($plugin['author'])) · {{ $plugin['author'] }}@endif
                             </p>
+                            @if (! ($plugin['compat']['ok'] ?? true))
+                                <p class="mt-2 inline-flex items-start gap-1.5 rounded-md bg-amber-50 dark:bg-amber-900/20 px-2 py-1 text-xs text-amber-700 dark:text-amber-300">
+                                    <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v4m0 4h.01M10.29 3.86l-8.48 14.7A1.5 1.5 0 003.11 21h17.78a1.5 1.5 0 001.3-2.44l-8.48-14.7a1.5 1.5 0 00-2.42 0z"/></svg>
+                                    <span>{{ __('Not compatible') }} — {{ implode('; ', $plugin['compat']['issues'] ?? []) }}</span>
+                                </p>
+                            @endif
                         </div>
-                        <form method="POST" action="{{ route('admin.plugins.install') }}" class="shrink-0"
-                              data-confirm="Install {{ $plugin['name'] ?? $plugin['id'] }} from the plugins repository?" data-confirm-button="Install" data-confirm-icon="question">
-                            @csrf
-                            <input type="hidden" name="id" value="{{ $plugin['id'] }}">
-                            <x-primary-button type="submit">{{ __('Install') }}</x-primary-button>
-                        </form>
+                        @if (! ($plugin['compat']['ok'] ?? true))
+                            <x-secondary-button type="button" disabled class="shrink-0 opacity-50 cursor-not-allowed">{{ __('Incompatible') }}</x-secondary-button>
+                        @else
+                            <form method="POST" action="{{ route('admin.plugins.install') }}" class="shrink-0"
+                                  data-confirm="Install {{ $plugin['name'] ?? $plugin['id'] }} from the plugins repository?" data-confirm-button="Install" data-confirm-icon="question">
+                                @csrf
+                                <input type="hidden" name="id" value="{{ $plugin['id'] }}">
+                                <x-primary-button type="submit">{{ __('Install') }}</x-primary-button>
+                            </form>
+                        @endif
                     </div>
                 @endforeach
             </div>
@@ -70,9 +80,15 @@
                             @if (! empty($plugin['update_available']))
                                 <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300">{{ __('Update') }} → v{{ $plugin['latest_version'] }}</span>
                             @endif
+                            @if (! ($plugin['compat']['ok'] ?? true))
+                                <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300" title="{{ implode('; ', $plugin['compat']['issues'] ?? []) }}">{{ __('Incompatible') }}</span>
+                            @endif
                         </div>
                         @if ($plugin['description'])
                             <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ $plugin['description'] }}</p>
+                        @endif
+                        @if (! ($plugin['compat']['ok'] ?? true))
+                            <p class="mt-1 text-xs text-amber-600 dark:text-amber-400">{{ implode('; ', $plugin['compat']['issues'] ?? []) }}</p>
                         @endif
                         <p class="mt-1 text-xs text-gray-400">
                             <span class="font-mono">{{ $plugin['id'] }}</span>@if ($plugin['author']) · {{ $plugin['author'] }}@endif
