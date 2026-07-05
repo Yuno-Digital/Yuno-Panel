@@ -74,7 +74,7 @@
 
             {{-- Tabs --}}
             <nav class="inline-flex items-center gap-1 rounded-xl bg-gray-100 dark:bg-gray-800/80 p-1.5 ring-1 ring-gray-200 dark:ring-gray-700">
-                @php $tabLabels = ['console' => __('Console'), 'files' => __('Files'), 'startup' => __('Startup'), 'settings' => __('Settings')]; @endphp
+                @php $tabLabels = ['console' => __('Console'), 'files' => __('Files'), 'schedules' => __('Schedules'), 'startup' => __('Startup'), 'settings' => __('Settings')]; @endphp
                 @foreach ($tabs as $key)
                     @php $label = $tabLabels[$key]; @endphp
                     <button type="button" @click="tab = '{{ $key }}'"
@@ -96,6 +96,125 @@
                             class="px-4 py-2 rounded-md bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 disabled:opacity-50">{{ __('Send') }}</button>
                 </form>
             </div>
+
+            {{-- Schedules --}}
+            @if (in_array('schedules', $tabs))
+                <div x-show="tab === 'schedules'" x-cloak class="space-y-6">
+                    {{-- Existing tasks --}}
+                    <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg overflow-hidden">
+                        @if ($server->scheduledTasks->isEmpty())
+                            <div class="p-6 text-sm text-gray-500 dark:text-gray-400">{{ __('No scheduled tasks yet. Add one below.') }}</div>
+                        @else
+                            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+                                <thead class="bg-gray-50 dark:bg-gray-700/40 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                                    <tr>
+                                        <th class="px-4 py-3">{{ __('Name') }}</th>
+                                        <th class="px-4 py-3">{{ __('Action') }}</th>
+                                        <th class="px-4 py-3">{{ __('Schedule') }}</th>
+                                        <th class="px-4 py-3">{{ __('Next run') }}</th>
+                                        <th class="px-4 py-3 text-right">{{ __('Actions') }}</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-200 dark:divide-gray-700 text-gray-700 dark:text-gray-300">
+                                    @foreach ($server->scheduledTasks as $task)
+                                        <tr>
+                                            <td class="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">{{ $task->name }}</td>
+                                            <td class="px-4 py-3">{{ $task->actionLabel() }}</td>
+                                            <td class="px-4 py-3"><code class="text-xs">{{ $task->cron }}</code></td>
+                                            <td class="px-4 py-3 text-xs">
+                                                @if ($task->is_active)
+                                                    {{ $task->next_run_at?->diffForHumans() ?? '—' }}
+                                                @else
+                                                    <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300">{{ __('Paused') }}</span>
+                                                @endif
+                                            </td>
+                                            <td class="px-4 py-3">
+                                                <div class="flex justify-end gap-2">
+                                                    <form method="POST" action="{{ route('servers.schedules.toggle', [$server, $task]) }}">
+                                                        @csrf @method('PATCH')
+                                                        <button class="text-gray-600 dark:text-gray-400 hover:underline">{{ $task->is_active ? __('Pause') : __('Resume') }}</button>
+                                                    </form>
+                                                    <form method="POST" action="{{ route('servers.schedules.destroy', [$server, $task]) }}"
+                                                          data-confirm="Delete the schedule '{{ $task->name }}'?" data-confirm-button="Delete">
+                                                        @csrf @method('DELETE')
+                                                        <button class="text-red-600 hover:underline">{{ __('Delete') }}</button>
+                                                    </form>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        @endif
+                    </div>
+
+                    {{-- New task --}}
+                    <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6" x-data="{ action: '{{ old('action', 'power') }}', preset: '{{ old('preset', 'daily') }}' }">
+                        <h4 class="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-4">{{ __('New scheduled task') }}</h4>
+                        <form method="POST" action="{{ route('servers.schedules.store', $server) }}" class="space-y-4">
+                            @csrf
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <x-input-label for="sch_name" :value="__('Name')" />
+                                    <x-text-input id="sch_name" name="name" type="text" class="mt-1 block w-full" :value="old('name')" placeholder="{{ __('Nightly restart') }}" required />
+                                    <x-input-error :messages="$errors->get('name')" class="mt-2" />
+                                </div>
+                                <div>
+                                    <x-input-label for="sch_action" :value="__('Action')" />
+                                    <select id="sch_action" name="action" x-model="action"
+                                            class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 focus:border-indigo-500 focus:ring-indigo-500">
+                                        <option value="power">{{ __('Power action') }}</option>
+                                        <option value="command">{{ __('Console command') }}</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div x-show="action === 'power'">
+                                <x-input-label for="sch_power" :value="__('Power action')" />
+                                <select id="sch_power" name="power_action"
+                                        class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 focus:border-indigo-500 focus:ring-indigo-500">
+                                    <option value="restart">{{ __('Restart') }}</option>
+                                    <option value="start">{{ __('Start') }}</option>
+                                    <option value="stop">{{ __('Stop') }}</option>
+                                </select>
+                            </div>
+
+                            <div x-show="action === 'command'" x-cloak>
+                                <x-input-label for="sch_command" :value="__('Console command')" />
+                                <x-text-input id="sch_command" name="command" type="text" class="mt-1 block w-full font-mono text-sm" :value="old('command')" placeholder="say Server restarts soon!" />
+                                <x-input-error :messages="$errors->get('command')" class="mt-2" />
+                            </div>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <x-input-label for="sch_preset" :value="__('Schedule')" />
+                                    <select id="sch_preset" name="preset" x-model="preset"
+                                            class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 focus:border-indigo-500 focus:ring-indigo-500">
+                                        <option value="every_5">{{ __('Every 5 minutes') }}</option>
+                                        <option value="every_15">{{ __('Every 15 minutes') }}</option>
+                                        <option value="every_30">{{ __('Every 30 minutes') }}</option>
+                                        <option value="hourly">{{ __('Hourly') }}</option>
+                                        <option value="every_6h">{{ __('Every 6 hours') }}</option>
+                                        <option value="daily">{{ __('Daily (midnight)') }}</option>
+                                        <option value="weekly">{{ __('Weekly (Sun 00:00)') }}</option>
+                                        <option value="custom">{{ __('Custom (cron)') }}</option>
+                                    </select>
+                                </div>
+                                <div x-show="preset === 'custom'" x-cloak>
+                                    <x-input-label for="sch_cron" :value="__('Cron expression')" />
+                                    <x-text-input id="sch_cron" name="cron" type="text" class="mt-1 block w-full font-mono text-sm" :value="old('cron')" placeholder="0 5 * * *" />
+                                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ __('Five fields: minute hour day month weekday. Times are the panel server timezone.') }}</p>
+                                    <x-input-error :messages="$errors->get('cron')" class="mt-2" />
+                                </div>
+                            </div>
+
+                            <div class="pt-2">
+                                <x-primary-button>{{ __('Add schedule') }}</x-primary-button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            @endif
 
             {{-- Files --}}
             <div x-show="tab === 'files'" x-cloak

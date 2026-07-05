@@ -53,9 +53,12 @@ Route::middleware('auth')->group(function () {
     Route::post('/servers/{server}/files/delete', [ServerController::class, 'fileDelete'])->name('servers.files.delete');
     Route::post('/servers/{server}/subusers', [ServerController::class, 'storeSubuser'])->name('servers.subusers.store');
     Route::delete('/servers/{server}/subusers/{user}', [ServerController::class, 'destroySubuser'])->name('servers.subusers.destroy');
+    Route::post('/servers/{server}/schedules', [ServerController::class, 'storeSchedule'])->name('servers.schedules.store');
+    Route::patch('/servers/{server}/schedules/{schedule}', [ServerController::class, 'toggleSchedule'])->name('servers.schedules.toggle');
+    Route::delete('/servers/{server}/schedules/{schedule}', [ServerController::class, 'destroySchedule'])->name('servers.schedules.destroy');
     // Deep-linkable UI tab, e.g. /servers/5/startup — resolves to the show page.
     Route::get('/servers/{server}/{tab}', [ServerController::class, 'show'])
-        ->whereIn('tab', ['console', 'files', 'startup', 'settings'])->name('servers.show.tab');
+        ->whereIn('tab', ['console', 'files', 'schedules', 'startup', 'settings'])->name('servers.show.tab');
 
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
     Route::post('/notifications/read', [NotificationController::class, 'markRead'])->name('notifications.read');
