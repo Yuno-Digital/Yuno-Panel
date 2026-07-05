@@ -494,26 +494,58 @@
             @if (in_array('network', $tabs))
                 <div x-show="tab === 'network'" x-cloak class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6">
                     <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100">{{ __('Network') }}</h3>
-                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ __('The address players use to connect to this server. Allocations are managed by an admin on the node.') }}</p>
+                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ __('IP:port allocations for this server. The primary is the main connect address; extra ports need the egg/game config and a reinstall to take effect.') }}</p>
 
-                    @if ($server->allocation)
-                        <div class="mt-5 flex flex-wrap items-center gap-4" x-data="{ copied: false }">
-                            <div class="rounded-xl bg-gray-50 dark:bg-gray-900/60 ring-1 ring-gray-200 dark:ring-gray-700 px-5 py-4">
-                                <p class="text-xs text-gray-500 dark:text-gray-400">{{ __('Primary address') }}</p>
-                                <p class="mt-1 font-mono text-xl font-semibold text-gray-900 dark:text-gray-100">{{ $server->allocation->address() }}</p>
-                            </div>
-                            <button type="button" @click="navigator.clipboard.writeText('{{ $server->allocation->address() }}'); copied = true; setTimeout(() => copied = false, 1500)"
-                                    class="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg bg-white/70 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-sm font-semibold text-gray-700 dark:text-gray-200 hover:bg-white dark:hover:bg-white/10">
-                                <span x-text="copied ? '{{ __('Copied') }}' : '{{ __('Copy') }}'"></span>
-                            </button>
-                        </div>
-                        <dl class="mt-5 grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-4 text-sm">
-                            <div><dt class="text-gray-500 dark:text-gray-400">{{ __('IP') }}</dt><dd class="mt-0.5 font-mono text-gray-900 dark:text-gray-100">{{ $server->allocation->ip }}</dd></div>
-                            <div><dt class="text-gray-500 dark:text-gray-400">{{ __('Port') }}</dt><dd class="mt-0.5 font-mono text-gray-900 dark:text-gray-100">{{ $server->allocation->port }}</dd></div>
-                            <div><dt class="text-gray-500 dark:text-gray-400">{{ __('Node') }}</dt><dd class="mt-0.5 font-medium text-gray-900 dark:text-gray-100">{{ $server->node?->name ?? '—' }}</dd></div>
-                        </dl>
+                    @if ($server->allocations->isEmpty())
+                        <div class="mt-5 text-sm text-gray-500 dark:text-gray-400">{{ __('No allocations assigned yet.') }}</div>
                     @else
-                        <div class="mt-5 text-sm text-gray-500 dark:text-gray-400">{{ __('No allocation assigned yet.') }}</div>
+                        <ul class="mt-4 divide-y divide-gray-100 dark:divide-gray-700">
+                            @foreach ($server->allocations as $alloc)
+                                @php $isPrimary = $alloc->id === $server->allocation_id; @endphp
+                                <li class="py-3 flex items-center justify-between gap-4" x-data="{ copied: false }">
+                                    <div class="flex items-center gap-3 min-w-0">
+                                        <span class="font-mono text-sm font-semibold text-gray-900 dark:text-gray-100">{{ $alloc->address() }}</span>
+                                        @if ($isPrimary)
+                                            <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold bg-gradient-to-r from-brand-500 to-fuchsia-500 text-white">{{ __('Primary') }}</span>
+                                        @endif
+                                        <button type="button" @click="navigator.clipboard.writeText('{{ $alloc->address() }}'); copied = true; setTimeout(() => copied = false, 1500)"
+                                                class="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-200" x-text="copied ? '{{ __('Copied') }}' : '{{ __('Copy') }}'"></button>
+                                    </div>
+                                    @if ($manages && ! $isPrimary)
+                                        <div class="shrink-0 flex items-center gap-3">
+                                            <form method="POST" action="{{ route('servers.allocations.primary', [$server, $alloc]) }}">
+                                                @csrf @method('PATCH')
+                                                <button class="text-sm text-gray-600 dark:text-gray-400 hover:underline">{{ __('Make primary') }}</button>
+                                            </form>
+                                            <form method="POST" action="{{ route('servers.allocations.remove', [$server, $alloc]) }}"
+                                                  data-confirm="Remove {{ $alloc->address() }} from this server?" data-confirm-button="Remove">
+                                                @csrf @method('DELETE')
+                                                <button class="text-sm text-red-600 hover:underline">{{ __('Remove') }}</button>
+                                            </form>
+                                        </div>
+                                    @endif
+                                </li>
+                            @endforeach
+                        </ul>
+                    @endif
+
+                    @if ($manages)
+                        @if ($freeAllocations->isNotEmpty())
+                            <form method="POST" action="{{ route('servers.allocations.add', $server) }}" class="mt-5 flex flex-wrap items-end gap-3 border-t border-gray-100 dark:border-gray-700 pt-5">
+                                @csrf
+                                <div>
+                                    <x-input-label for="alloc_id" :value="__('Add allocation from this node')" />
+                                    <select id="alloc_id" name="allocation_id" class="mt-1 block rounded-lg border-gray-200 dark:border-white/10 dark:bg-gray-900 dark:text-gray-100 focus:border-brand-500 focus:ring-brand-400/40 text-sm font-mono">
+                                        @foreach ($freeAllocations as $free)
+                                            <option value="{{ $free->id }}">{{ $free->address() }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <x-primary-button>{{ __('Add allocation') }}</x-primary-button>
+                            </form>
+                        @else
+                            <p class="mt-5 text-xs text-gray-400">{{ __('No free allocations on this node. An admin can add more under Admin → Nodes.') }}</p>
+                        @endif
                     @endif
                 </div>
             @endif
