@@ -67,13 +67,13 @@
 
         {{-- Auto Deploy --}}
         @php
-            $configureCmd = sprintf('sudo yuno-wings configure --panel-url %s --token %s --node %d',
+            $configureCmd = sprintf('cd /etc/yuno && sudo yuno-wings configure --panel-url %s --token %s --node %d && sudo systemctl restart yuno-wings',
                 rtrim(config('app.url'), '/'), $node->daemon_token, $node->id);
         @endphp
         <div x-show="tab === 'deploy'" x-cloak class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6 max-w-3xl">
             <h4 class="text-base font-semibold text-gray-900 dark:text-gray-100">{{ __('Auto Deploy') }}</h4>
             <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                {{ __('Run this on the node host. The daemon fetches its config (including the token) from the panel and writes config.json, so the token stays the same across restarts.') }}
+                {{ __('First install the daemon with the node install script, then run this on the node host. It fetches the config (including the token) from the panel, writes config.json and restarts the daemon.') }}
             </p>
 
             <div class="mt-4" x-data="{ copied: false }">
@@ -85,7 +85,7 @@
                         <span x-text="copied ? '{{ __('Copied') }}' : '{{ __('Copy') }}'"></span>
                     </button>
                 </div>
-                <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">{{ __('Then start the daemon:') }} <code class="text-gray-700 dark:text-gray-300">yuno-wings</code></p>
+                <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">{{ __('No prior install yet? Run the node install script first:') }} <code class="text-gray-700 dark:text-gray-300">curl -fsSL https://raw.githubusercontent.com/Yuno-Digital/Yuno-Panel-Wings/main/install.sh | bash</code></p>
             </div>
 
             <div class="mt-6 border-t border-gray-200 dark:border-gray-700 pt-4">
